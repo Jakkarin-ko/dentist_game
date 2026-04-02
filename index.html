@@ -3,246 +3,172 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Happy Teeth AI - Ultimate</title>
+    <title>Happy Teeth AI - Star Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        .star-glow { filter: drop-shadow(0 0 10px #fbbf24); }
+        .bg-dark-mesh { background: radial-gradient(circle at top right, #1e1b4b, #020617); }
+    </style>
 </head>
-<body class="bg-slate-950 text-white min-h-screen flex items-center justify-center p-4 font-sans overflow-hidden">
+<body class="bg-dark-mesh text-white min-h-screen flex items-center justify-center p-4 font-sans overflow-hidden">
 
     <audio id="bg-music" loop src="https://cdn.pixabay.com/audio/2024/03/26/audio_2434522956.mp3"></audio>
     <audio id="sfx-correct" src="https://cdn.pixabay.com/audio/2022/03/15/audio_1334530656.mp3"></audio>
-    <audio id="sfx-finish" src="https://cdn.pixabay.com/audio/2021/08/04/audio_1334530656.mp3"></audio>
 
-    <div id="app" class="w-full max-w-md relative z-10">
-        <div id="home-screen" class="bg-slate-900 p-10 rounded-[50px] shadow-2xl text-center border-b-8 border-indigo-600 relative overflow-hidden">
-            <div class="text-9xl mb-6 relative z-10">🦷</div>
-            <h1 class="text-4xl font-black mb-1 text-white tracking-tighter relative z-10">HAPPY TEETH</h1>
-            <p class="text-indigo-400 text-xs mb-8 uppercase tracking-[0.4em] font-bold relative z-10">AI Dental Trainer</p>
+    <div id="app" class="w-full max-w-md relative">
+        <div id="home-screen" class="bg-slate-900/90 backdrop-blur-xl p-8 rounded-[50px] shadow-2xl text-center border-b-8 border-indigo-600 border-x-2 border-indigo-500/20">
+            <div class="text-7xl mb-4">🦷</div>
+            <h1 class="text-4xl font-black mb-1 text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-pink-400">HAPPY TEETH</h1>
             
-            <div class="bg-slate-950 p-6 rounded-3xl mb-8 border border-slate-700 shadow-inner relative z-10">
-                <p class="text-slate-500 font-bold text-[10px] uppercase mb-1 tracking-widest text-left ml-1">Overall Cleanliness</p>
-                <div id="display-score" class="text-7xl font-black mb-2 text-white">0%</div>
-                <div class="w-full bg-slate-800 rounded-full h-4 overflow-hidden border border-slate-900 shadow-inner">
-                    <div id="score-bar" class="h-full bg-indigo-500 transition-all duration-300 shadow-[0_0_20px_rgba(99,102,241,0.8)]" style="width: 0%"></div>
+            <div class="mt-6 mb-8 bg-slate-950/50 p-4 rounded-3xl border border-slate-800">
+                <p class="text-[10px] font-bold text-indigo-400 uppercase tracking-[0.3em] mb-3">ภารกิจสะสมดวงดาว 7 วัน</p>
+                <div id="star-container" class="flex justify-between px-2">
+                    </div>
+                <p id="streak-text" class="text-xs text-slate-500 mt-3 font-bold">แปรงฟันให้ครบ 7 วันเพื่อรับรางวัลใหญ่!</p>
+            </div>
+
+            <div class="bg-slate-950 p-5 rounded-3xl mb-8 border border-slate-800">
+                <p class="text-slate-500 font-bold text-[10px] uppercase mb-1 tracking-widest text-left ml-1">คะแนนความสะอาดล่าสุด</p>
+                <div id="display-score" class="text-6xl font-black mb-2">0%</div>
+                <div class="w-full bg-slate-800 rounded-full h-3 overflow-hidden">
+                    <div id="score-bar" class="h-full bg-gradient-to-r from-indigo-500 to-pink-500 transition-all duration-300" style="width: 0%"></div>
                 </div>
             </div>
 
-            <button onclick="initAI()" class="w-full py-6 bg-indigo-600 rounded-[30px] text-2xl font-black shadow-lg shadow-indigo-500/30 active:scale-95 transition-all hover:bg-indigo-500 relative z-10">
+            <button onclick="initAI()" class="w-full py-6 bg-indigo-600 rounded-[30px] text-2xl font-black shadow-xl hover:bg-indigo-500 active:scale-95 transition-all">
                 เริ่มแปรงฟัน! 🚀
             </button>
-            <div class="absolute inset-0 bg-indigo-950/30 opacity-50 blur-3xl rounded-full"></div>
         </div>
 
         <div id="setup-screen" class="hidden bg-slate-900 p-12 rounded-[50px] shadow-2xl text-center border-b-8 border-slate-700">
             <div class="inline-block animate-spin rounded-full h-16 w-16 border-4 border-indigo-500 border-t-transparent mb-8"></div>
-            <h2 class="text-3xl font-bold mb-3 text-white">เตรียมระบบ AI</h2>
-            <p id="status-text" class="text-indigo-400 text-sm font-mono uppercase tracking-[0.2em] animate-pulse">Initialising WASM...</p>
+            <h2 class="text-2xl font-bold mb-2">กำลังเตรียมสมอง AI</h2>
+            <p id="status-text" class="text-indigo-400 text-xs font-mono uppercase tracking-[0.2em]">Loading...</p>
         </div>
 
         <div id="game-screen" class="hidden flex flex-col items-center">
-            <div class="relative w-full aspect-[3/4] bg-black rounded-[45px] overflow-hidden border-[8px] border-slate-800 shadow-2xl">
+            <div class="relative w-full aspect-[3/4] bg-black rounded-[45px] overflow-hidden border-[6px] border-slate-800 shadow-2xl">
                 <video id="webcam" class="absolute inset-0 w-full h-full object-cover scale-x-[-1]" playsinline muted></video>
                 <canvas id="overlay" class="absolute inset-0 w-full h-full"></canvas>
-                
-                <div class="absolute top-6 inset-x-6 flex justify-between items-center z-20">
-                    <div id="timer" class="bg-pink-600 text-white px-5 py-2 rounded-2xl font-black text-2xl shadow-xl border-2 border-white/20">10s</div>
-                    <div id="zone-tag" class="bg-indigo-600 text-white px-4 py-2 rounded-2xl font-bold text-sm border-2 border-white/20 tracking-tighter uppercase">โซนที่ 1: ซ้ายบน</div>
-                </div>
-
-                <div id="screen-flash" class="absolute inset-0 bg-transparent transition-colors duration-200 z-10 pointer-events-none"></div>
+                <div id="timer" class="absolute top-6 right-6 bg-pink-600 text-white px-5 py-2 rounded-2xl font-black text-2xl shadow-xl border-2 border-white/20">10s</div>
+                <div id="screen-flash" class="absolute inset-0 bg-transparent transition-colors duration-200 pointer-events-none"></div>
             </div>
-            <div class="mt-6 bg-slate-900 p-6 rounded-3xl w-full text-center border-2 border-slate-800 shadow-lg">
-                <p id="instruction" class="text-white font-bold text-lg animate-pulse tracking-tight">อ้าปากกว้างๆ แล้วเอาแปรงสีฟันไปวางให้ตรงจุด!</p>
+            <div class="mt-4 bg-slate-900 p-4 rounded-2xl w-full text-center border border-slate-800">
+                <p id="zone-tag" class="text-indigo-400 font-black uppercase text-sm tracking-widest mb-1">โซนที่ 1: ซ้ายบน</p>
+                <p class="text-white text-xs opacity-70">เอาแปรงสีฟันวางทับจุดสีขาวให้เปลี่ยนเป็นสีเขียว!</p>
             </div>
         </div>
     </div>
 
-    <div id="finish-overlay" class="hidden fixed inset-0 bg-black/80 z-50 flex flex-col items-center justify-center p-10 backdrop-blur-sm">
-        <div class="text-9xl mb-8 animate-bounce">🏆</div>
-        <h2 class="text-6xl font-black mb-4 text-white text-center tracking-tighter">ยอดเยี่ยมมาก!</h2>
-        <p class="text-2xl text-indigo-300 mb-12 text-center">ฟันสะอาดครบทุกโซนแล้ว ✨</p>
-        <button onclick="location.reload()" class="px-12 py-5 bg-white text-indigo-700 rounded-full text-2xl font-black shadow-xl hover:scale-105 transition-all">
-            กลับหน้าแรก
-        </button>
+    <div id="finish-overlay" class="hidden fixed inset-0 bg-slate-950/90 z-50 flex flex-col items-center justify-center p-10 backdrop-blur-md">
+        <div class="text-9xl mb-6">🌟</div>
+        <h2 class="text-5xl font-black mb-2 text-white text-center">สุดยอดไปเลย!</h2>
+        <p class="text-indigo-300 text-xl mb-10 text-center">คุณได้รับดวงดาวของวันนี้แล้ว</p>
+        <button onclick="location.reload()" class="px-12 py-5 bg-indigo-600 text-white rounded-full text-2xl font-black shadow-2xl">รับรางวัล</button>
     </div>
 
     <script type="module">
         import { FaceLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
 
-        let faceLandmarker;
-        let isGameRunning = false;
-        let timeLeft = 10;
-        let currentZone = 1;
-        let finalScore = 0;
-        let isCorrectPlace = false; // ตัวแปรเช็คว่าแปรงถูกจุดไหม
-        let lastTimestamp = 0;
+        let faceLandmarker, isGameRunning = false, timeLeft = 10, currentZone = 1, finalScore = 0;
+        const video = document.getElementById('webcam'), canvas = document.getElementById('overlay'), ctx = canvas.getContext('2d');
+        const zones = [{n:"ซ้ายบน",x:-80,y:-50},{n:"ขวาบน",x:80,y:-50},{n:"ซ้ายล่าง",x:-80,y:50},{n:"ขวาล่าง",x:80,y:50}];
 
-        const video = document.getElementById('webcam');
-        const canvas = document.getElementById('overlay');
-        const ctx = canvas.getContext('2d');
-        const status = document.getElementById('status-text');
-        const flash = document.getElementById('screen-flash');
-
-        const bgMusic = document.getElementById('bg-music');
-        const sfxCorrect = document.getElementById('sfx-correct');
-        const sfxFinish = document.getElementById('sfx-finish');
-
-        const zones = [
-            { id: 1, name: "ซ้ายบน", ox: -80, oy: -50 },
-            { id: 2, name: "ขวาบน", ox: 80, oy: -50 },
-            { id: 3, name: "ซ้ายล่าง", ox: -80, oy: 50 },
-            { id: 4, name: "ขวาล่าง", ox: 80, oy: 50 }
-        ];
+        // ระบบดวงดาว (LocalStorage)
+        function updateStars() {
+            const starContainer = document.getElementById('star-container');
+            let streak = JSON.parse(localStorage.getItem('brush_streak') || "[]");
+            starContainer.innerHTML = '';
+            for(let i=0; i<7; i++) {
+                const isActive = streak[i] === true;
+                starContainer.innerHTML += `<div class="text-2xl ${isActive ? 'text-yellow-400 star-glow' : 'text-slate-700'}">${isActive ? '⭐' : '🔘'}</div>`;
+            }
+            if(streak.filter(x=>x).length >= 7) document.getElementById('streak-text').innerText = "🎉 ยินดีด้วย! คุณเก่งที่สุดในโลก!";
+        }
 
         window.initAI = async () => {
             document.getElementById('home-screen').classList.add('hidden');
             document.getElementById('setup-screen').classList.remove('hidden');
-
             try {
-                status.innerText = "1. Loading WASM Engine...";
                 const fileset = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm");
-
-                status.innerText = "2. Training AI Brain...";
                 faceLandmarker = await FaceLandmarker.createFromOptions(fileset, {
-                    baseOptions: {
-                        modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
-                        delegate: "CPU"
-                    },
+                    baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task", delegate: "CPU" },
                     runningMode: "VIDEO"
                 });
-
-                status.innerText = "3. Starting Camera...";
                 const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
                 video.srcObject = stream;
-                video.onloadedmetadata = () => {
-                    video.play();
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-                    startGame();
-                };
-            } catch (err) {
-                alert("Error: " + err.message);
-                location.reload();
-            }
+                video.onloadedmetadata = () => { video.play(); canvas.width = video.videoWidth; canvas.height = video.videoHeight; startGame(); };
+            } catch (e) { alert(e); location.reload(); }
         };
 
         function startGame() {
             document.getElementById('setup-screen').classList.add('hidden');
             document.getElementById('game-screen').classList.remove('hidden');
             isGameRunning = true;
-            currentZone = 1;
-            timeLeft = 10;
-            finalScore = 0;
-            
-            bgMusic.volume = 0.3;
-            bgMusic.play(); // เล่นเพลงประกอบ
-
+            document.getElementById('bg-music').play();
             renderLoop();
-            
             const timerInt = setInterval(() => {
-                if (!isGameRunning) { clearInterval(timerInt); return; }
-                
+                if(!isGameRunning) { clearInterval(timerInt); return; }
                 timeLeft--;
                 document.getElementById('timer').innerText = timeLeft + "s";
-                document.getElementById('zone-tag').innerText = `โซนที่ ${currentZone}: ${zones[currentZone-1].name}`;
-
-                if (timeLeft <= 0) {
-                    if (currentZone < 4) {
-                        currentZone++;
-                        timeLeft = 10;
-                    } else {
-                        clearInterval(timerInt);
-                        finishGame();
-                    }
+                document.getElementById('zone-tag').innerText = `โซนที่ ${currentZone}: ${zones[currentZone-1].n}`;
+                if(timeLeft <= 0) { 
+                    if(currentZone < 4) { currentZone++; timeLeft = 10; } 
+                    else { clearInterval(timerInt); finishGame(); }
                 }
             }, 1000);
         }
 
         function finishGame() {
             isGameRunning = false;
-            bgMusic.pause();
-            sfxFinish.play(); // เล่นเสียงจบเกม
-
-            // เอฟเฟกต์พลุ Confetti
             confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-            setTimeout(() => { confetti({ particleCount: 100, spread: 100, origin: { y: 0.3 } }); }, 500);
+            
+            // บันทึกดวงดาว
+            let streak = JSON.parse(localStorage.getItem('brush_streak') || "[]");
+            if(streak.length >= 7) streak = []; // ครบ 7 วันเริ่มใหม่
+            streak.push(true);
+            localStorage.setItem('brush_streak', JSON.stringify(streak));
 
             document.getElementById('finish-overlay').classList.remove('hidden');
         }
 
         function renderLoop() {
-            if (!isGameRunning) return;
-
+            if(!isGameRunning) return;
             const results = faceLandmarker.detectForVideo(video, Date.now());
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const flash = document.getElementById('screen-flash');
 
             if (results.faceLandmarks?.[0]) {
-                // หาตำแหน่งปาก (Landmark 13)
                 const lip = results.faceLandmarks[0][13];
-                const mx = (1 - lip.x) * canvas.width;
-                const my = lip.y * canvas.height;
-
-                // วาดจุดเป้าหมายตามโซนที่ต้องแปรง
-                const zone = zones[currentZone - 1];
-                const targetX = mx + zone.ox;
-                const targetY = my + zone.oy;
-
-                // 🛠 ระบบ Collision Detection (เช็คว่าแปรงถูกจุดไหม)
-                // คำนวณระยะห่างระหว่าง "ปาก" กับ "เป้าหมาย"
-                // (ในเกมจริง เด็กต้องเอาแปรงไปวางทับปากตัวเอง ดังนั้นปากกับเป้าหมายต้องอยู่ใกล้กัน)
-                const distance = Math.sqrt(Math.pow(mx - targetX, 2) + Math.pow(my - targetY, 2));
+                const mx = (1-lip.x)*canvas.width, my = lip.y*canvas.height;
+                const zone = zones[currentZone-1];
+                const tx = mx+zone.x, ty = my+zone.y;
+                const dist = Math.sqrt((mx-tx)**2 + (my-ty)**2);
                 
-                // ถ้าระยะห่างน้อยกว่า 60 พิกเซล (ถือว่าแปรงถูกจุด)
-                if (distance < 60) {
-                    isCorrectPlace = true;
-                    // เพิ่มคะแนน Cleanliness (สูงสุด 100)
-                    finalScore = Math.min(100, finalScore + 0.1); 
-                    flash.classList.add('bg-green-500/20');
-                    flash.classList.remove('bg-red-500/10');
-                    
-                    // เล่นเสียง Correct ทุกๆ 1 วินาทีถ้าแปรงถูก
-                    if (Date.now() - lastTimestamp > 1000) {
-                        sfxCorrect.volume = 0.5;
-                        sfxCorrect.play();
-                        lastTimestamp = Date.now();
-                    }
+                const isOk = dist < 65;
+                if(isOk) {
+                    finalScore = Math.min(100, finalScore + 0.2);
+                    flash.style.backgroundColor = "rgba(74, 222, 128, 0.1)";
+                    document.getElementById('sfx-correct').play();
                 } else {
-                    isCorrectPlace = false;
-                    flash.classList.add('bg-red-500/10');
-                    flash.classList.remove('bg-green-500/20');
+                    flash.style.backgroundColor = "rgba(239, 68, 68, 0.1)";
                 }
 
-                // อัปเดต Score Bar ในหน้า Home ชั่วคราว (เพื่อให้เห็นตอนเล่น)
                 document.getElementById('display-score').innerText = Math.round(finalScore) + "%";
                 document.getElementById('score-bar').style.width = finalScore + "%";
 
-                // 🎨 กำหนดสีตามความถูกต้อง
-                const color = isCorrectPlace ? "rgba(74, 222, 128, 0.9)" : "rgba(255, 255, 255, 0.9)"; // เขียว / ขาว
-                const targetColor = isCorrectPlace ? "rgba(74, 222, 128, 0.6)" : "rgba(239, 68, 68, 0.6)"; // เขียว / แดง
+                ctx.beginPath(); ctx.arc(tx, ty, 50, 0, Math.PI*2);
+                ctx.strokeStyle = isOk ? "#4ade80" : "#ef4444";
+                ctx.lineWidth = 5; ctx.setLineDash([10, 10]); ctx.stroke();
 
-                // วาดวงกลมเป้าหมาย (Animated Circle)
-                ctx.beginPath();
-                ctx.arc(targetX, targetY, 50, 0, Math.PI * 2);
-                ctx.strokeStyle = targetColor;
-                ctx.lineWidth = 6;
-                ctx.setLineDash([15, 8]);
-                ctx.stroke();
-
-                // วาดฟองสบู่ที่ตำแหน่งปาก (ตรวจจับด้วย AI)
-                ctx.setLineDash([]);
-                ctx.beginPath();
-                ctx.arc(mx, my, 30, 0, Math.PI * 2);
-                ctx.fillStyle = color;
-                ctx.shadowBlur = 25;
-                ctx.shadowColor = color;
-                ctx.fill();
-            } else {
-                // ถ้าตรวจไม่เจอหน้า (แปรงผิดที่)
-                isCorrectPlace = false;
-                flash.classList.add('bg-red-500/10');
+                ctx.setLineDash([]); ctx.beginPath(); ctx.arc(mx, my, 30, 0, Math.PI*2);
+                ctx.fillStyle = isOk ? "#4ade80" : "#ffffff";
+                ctx.shadowBlur = 20; ctx.shadowColor = isOk ? "#4ade80" : "#ffffff"; ctx.fill();
             }
             requestAnimationFrame(renderLoop);
         }
+        updateStars();
     </script>
 </body>
 </html>
