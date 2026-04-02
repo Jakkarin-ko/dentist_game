@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Happy Teeth - AI Brushing Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/vision_bundle.js" crossorigin="anonymous"></script>
+</head>
+<body class="bg-indigo-50 font-sans min-h-screen flex items-center justify-center p-4">
+
+    <div id="app" class="w-full max-w-md">
+        <div id="home-screen" class="bg-white p-10 rounded-[50px] shadow-2xl text-center border-t-8 border-pink-400">
+            <div class="text-8xl mb-6">✨</div>
+            <h1 class="text-4xl font-black text-indigo-600 mb-2">ฟันสะอาดจัง!</h1>
+            <p class="text-gray-400 font-bold mb-8 italic">สะสมคะแนนจากการแปรงฟัน</p>
+            
+            <div class="bg-indigo-50 p-6 rounded-3xl mb-8 border-2 border-indigo-100 shadow-inner">
+                <p class="text-indigo-400 font-bold text-xs uppercase mb-1 tracking-widest">Clean Score</p>
+                <div id="display-score" class="text-7xl font-black text-indigo-600 mb-2">65%</div>
+                <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden border border-gray-100">
+                    <div id="score-bar" class="h-full bg-pink-500 transition-all duration-1000" style="width: 65%"></div>
+                </div>
+            </div>
+
+            <button onclick="switchScreen('setup')" class="w-full py-5 bg-pink-500 text-white rounded-3xl text-2xl font-black shadow-[0_10px_0_0_rgba(219,39,119,1)] hover:translate-y-1 hover:shadow-[0_6px_0_0_rgba(219,39,119,1)] active:shadow-none transition-all">
+                เริ่มแปรงฟัน! 🚀
+            </button>
+        </div>
+
+        <div id="setup-screen" class="hidden bg-white p-10 rounded-[50px] shadow-2xl text-center border-b-8 border-indigo-200">
+            <div class="text-6xl mb-6 animate-bounce">🦷</div>
+            <h2 class="text-2xl font-black text-indigo-600 mb-4">กำลังเตรียมระบบ AI</h2>
+            <p id="status-text" class="text-indigo-400 font-bold text-sm animate-pulse uppercase tracking-widest">ตรวจสอบ Library...</p>
+        </div>
+
+        <div id="game-screen" class="hidden flex flex-col items-center">
+            <div class="relative w-full aspect-[4/3] bg-black rounded-[40px] overflow-hidden border-[10px] border-white shadow-2xl">
+                <video id="webcam" class="absolute inset-0 w-full h-full object-cover scale-x-[-1]" playsinline muted></video>
+                <canvas id="overlay" class="absolute inset-0 w-full h-full"></canvas>
+                <div id="timer" class="absolute top-6 right-6 bg-pink-500 text-white px-6 py-2 rounded-2xl font-black text-2xl border-4 border-white shadow-lg">10s</div>
+            </div>
+            <div class="mt-8 bg-white p-6 rounded-3xl shadow-xl w-full text-center border-b-8 border-indigo-100">
+                <p id="game-instruction" class="text-2xl font-black text-indigo-700 tracking-wide uppercase">อ้าปากกว้างๆ แล้วแปรงตามจุด!</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- ตัวแปรควบคุมระบบ ---
+        let score = 65;
+        let timeLeft = 10;
+        let currentZone = 1;
+        let faceLandmarker;
+        let isGameRunning = false;
+
+        const video = document.getElementById('webcam');
+        const canvas = document.getElementById('overlay');
+        const ctx = canvas.getContext('2d');
+
+        // --- ฟังก์ชันสลับหน้าจอ ---
+        function switchScreen(screen) {
+            document.getElementById('home-screen').classList.add('hidden');
+            document.getElementById('setup-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.add('hidden');
+            
+            if (screen === 'setup') {
+                document.getElementById('setup-screen').classList.remove('hidden');
+                initAI();
+            } else if (screen === 'game') {
+                document.getElementById('game-screen').classList.remove('hidden');
+            } else {
+                document.getElementById('home-screen').classList.remove('hidden');
+            }
+        }
+
+        // --- ฟังก์ชัน AI ---
+        async function initAI() {
+            try {
+                const status = document.getElementById('status-text');
+                
+                // ตรวจเช็ค Library จนกว่าจะเจอ (แก้ปัญหา undefined)
+                let attempts = 0;
+                while (!window.mediapipe?.tasksVision && attempts < 30) {
+                    status.innerText = `เชื่อมต่อ Library (${attempts+1}/30)...`;
+                    await new Promise(r => setTimeout(r, 500));
+                    attempts++;
+                }
+
+                const vision = window.mediapipe.tasksVision;
+                status.innerText = "กำลังโหลดสมอง AI...";
+                
+                const fileset = await vision.FilesetResolver.forVisionTasks(
+                    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
+                );
+
+                faceLandmarker = await vision.FaceLandmarker.createFromOptions(fileset, {
+                    baseOptions: {
+                        modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+                        delegate: "CPU"
+                    },
+                    runningMode: "VIDEO"
+                });
+
+                status.innerText = "เปิดกล้อง...";
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+                video.srcObject = stream;
+                
+                video.onloadedmetadata = () => {
+                    video.play();
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    startGame();
+                };
+            } catch (err) {
+                alert("Error: " + err.message);
+                switchScreen('home');
+            }
+        }
+
+        function startGame() {
+            switchScreen('game');
+            isGameRunning = true;
+            timeLeft = 10;
+            currentZone = 1;
+            renderLoop();
+            startTimer();
+        }
+
+        function startTimer() {
+            const timerElement = document.getElementById('timer');
+            const interval = setInterval(() => {
+                if (!isGameRunning) { clearInterval(interval); return; }
+                
+                timeLeft--;
+                timerElement.innerText = timeLeft + "s";
+
+                if (timeLeft <= 0) {
+                    if (currentZone < 4) {
+                        currentZone++;
+                        timeLeft = 10;
+                    } else {
+                        clearInterval(interval);
+                        finishGame();
+                    }
+                }
+            }, 1000);
+        }
+
+        function finishGame() {
+            isGameRunning = false;
+            score = Math.min(100, score + 15);
+            document.getElementById('display-score').innerText = score + "%";
+            document.getElementById('score-bar').style.width = score + "%";
+            
+            // ปิดกล้องเพื่อประหยัดแบต
+            const stream = video.srcObject;
+            stream.getTracks().forEach(track => track.stop());
+            
+            alert("เก่งมาก! ฟันสะอาดขึ้นแล้ว ✨");
+            switchScreen('home');
+        }
+
+        function renderLoop() {
+            if (!isGameRunning) return;
+
+            const results = faceLandmarker.detectForVideo(video, Date.now());
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (results.faceLandmarks && results.faceLandmarks[0]) {
+                const lip = results.faceLandmarks[0][13];
+                const mx = (1 - lip.x) * canvas.width;
+                const my = lip.y * canvas.height;
+
+                // วาดจุดเป้าหมายให้เด็กแปรงตาม (4 มุมรอบปาก)
+                const offset = 60;
+                const zones = [
+                    { x: mx - offset, y: my - 30 }, { x: mx + offset, y: my - 30 },
+                    { x: mx - offset, y: my + 30 }, { x: mx + offset, y: my + 30 }
+                ];
+                
+                const active = zones[currentZone - 1];
+                
+                // วาดเป้าหมาย
+                ctx.beginPath();
+                ctx.arc(active.x, active.y, 40, 0, Math.PI * 2);
+                ctx.strokeStyle = "white";
+                ctx.lineWidth = 5;
+                ctx.setLineDash([10, 5]);
+                ctx.stroke();
+
+                // วาด Effect ฟองสบู่
+                ctx.beginPath();
+                ctx.arc(mx, my, 20, 0, Math.PI * 2);
+                ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+                ctx.fill();
+            }
+
+            requestAnimationFrame(renderLoop);
+        }
+    </script>
+</body>
+</html>
