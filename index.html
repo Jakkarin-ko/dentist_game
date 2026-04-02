@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Happy Teeth AI - Star Edition</title>
+    <title>Happy Teeth AI - Transparent Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
@@ -23,8 +23,7 @@
             
             <div class="mt-6 mb-8 bg-slate-950/50 p-4 rounded-3xl border border-slate-800">
                 <p class="text-[10px] font-bold text-indigo-400 uppercase tracking-[0.3em] mb-3">ภารกิจสะสมดวงดาว 7 วัน</p>
-                <div id="star-container" class="flex justify-between px-2">
-                    </div>
+                <div id="star-container" class="flex justify-between px-2"></div>
                 <p id="streak-text" class="text-xs text-slate-500 mt-3 font-bold">แปรงฟันให้ครบ 7 วันเพื่อรับรางวัลใหญ่!</p>
             </div>
 
@@ -56,7 +55,7 @@
             </div>
             <div class="mt-4 bg-slate-900 p-4 rounded-2xl w-full text-center border border-slate-800">
                 <p id="zone-tag" class="text-indigo-400 font-black uppercase text-sm tracking-widest mb-1">โซนที่ 1: ซ้ายบน</p>
-                <p class="text-white text-xs opacity-70">เอาแปรงสีฟันวางทับจุดสีขาวให้เปลี่ยนเป็นสีเขียว!</p>
+                <p class="text-white text-xs opacity-70">ส่องกระจกผ่านฟองสบู่ใสๆ แล้วแปรงให้ตรงจุดนะ!</p>
             </div>
         </div>
     </div>
@@ -75,7 +74,6 @@
         const video = document.getElementById('webcam'), canvas = document.getElementById('overlay'), ctx = canvas.getContext('2d');
         const zones = [{n:"ซ้ายบน",x:-80,y:-50},{n:"ขวาบน",x:80,y:-50},{n:"ซ้ายล่าง",x:-80,y:50},{n:"ขวาล่าง",x:80,y:50}];
 
-        // ระบบดวงดาว (LocalStorage)
         function updateStars() {
             const starContainer = document.getElementById('star-container');
             let streak = JSON.parse(localStorage.getItem('brush_streak') || "[]");
@@ -84,7 +82,6 @@
                 const isActive = streak[i] === true;
                 starContainer.innerHTML += `<div class="text-2xl ${isActive ? 'text-yellow-400 star-glow' : 'text-slate-700'}">${isActive ? '⭐' : '🔘'}</div>`;
             }
-            if(streak.filter(x=>x).length >= 7) document.getElementById('streak-text').innerText = "🎉 ยินดีด้วย! คุณเก่งที่สุดในโลก!";
         }
 
         window.initAI = async () => {
@@ -123,13 +120,10 @@
         function finishGame() {
             isGameRunning = false;
             confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-            
-            // บันทึกดวงดาว
             let streak = JSON.parse(localStorage.getItem('brush_streak') || "[]");
-            if(streak.length >= 7) streak = []; // ครบ 7 วันเริ่มใหม่
+            if(streak.length >= 7) streak = [];
             streak.push(true);
             localStorage.setItem('brush_streak', JSON.stringify(streak));
-
             document.getElementById('finish-overlay').classList.remove('hidden');
         }
 
@@ -158,13 +152,24 @@
                 document.getElementById('display-score').innerText = Math.round(finalScore) + "%";
                 document.getElementById('score-bar').style.width = finalScore + "%";
 
+                // วาดเป้าหมาย
                 ctx.beginPath(); ctx.arc(tx, ty, 50, 0, Math.PI*2);
                 ctx.strokeStyle = isOk ? "#4ade80" : "#ef4444";
                 ctx.lineWidth = 5; ctx.setLineDash([10, 10]); ctx.stroke();
 
-                ctx.setLineDash([]); ctx.beginPath(); ctx.arc(mx, my, 30, 0, Math.PI*2);
-                ctx.fillStyle = isOk ? "#4ade80" : "#ffffff";
-                ctx.shadowBlur = 20; ctx.shadowColor = isOk ? "#4ade80" : "#ffffff"; ctx.fill();
+                // วาดจุดที่ปากแบบ Transparent (โปร่งใส 50%)
+                ctx.setLineDash([]); 
+                ctx.beginPath(); 
+                ctx.arc(mx, my, 35, 0, Math.PI*2);
+                ctx.fillStyle = isOk ? "rgba(74, 222, 128, 0.5)" : "rgba(255, 255, 255, 0.5)";
+                ctx.shadowBlur = 20; 
+                ctx.shadowColor = isOk ? "#4ade80" : "#ffffff"; 
+                ctx.fill();
+                
+                // ขอบฟองสบู่
+                ctx.strokeStyle = isOk ? "rgba(74, 222, 128, 0.8)" : "rgba(255, 255, 255, 0.8)";
+                ctx.lineWidth = 2;
+                ctx.stroke();
             }
             requestAnimationFrame(renderLoop);
         }
