@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Happy Teeth AI - Clear View</title>
+    <title>Happy Teeth AI - Global Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
@@ -19,16 +19,16 @@
     <div id="app" class="w-full max-w-md relative">
         <div id="home-screen" class="bg-slate-900/90 backdrop-blur-xl p-8 rounded-[50px] shadow-2xl text-center border-b-8 border-indigo-600 border-x-2 border-indigo-500/20">
             <div class="text-7xl mb-4">🦷</div>
-            <h1 class="text-4xl font-black mb-1 text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-pink-400 font-sans">HAPPY TEETH</h1>
+            <h1 class="text-4xl font-black mb-1 text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-pink-400">HAPPY TEETH</h1>
             
             <div class="mt-6 mb-8 bg-slate-950/50 p-4 rounded-3xl border border-slate-800">
-                <p class="text-[10px] font-bold text-indigo-400 uppercase tracking-[0.3em] mb-3">ภารกิจสะสมดวงดาว 7 วัน</p>
+                <p class="text-[10px] font-bold text-indigo-400 uppercase tracking-[0.3em] mb-3">7-Day Star Mission</p>
                 <div id="star-container" class="flex justify-between px-2"></div>
-                <p id="streak-text" class="text-xs text-slate-500 mt-3 font-bold">แปรงฟันให้ครบ 7 วันเพื่อรับรางวัลใหญ่!</p>
+                <p id="streak-text" class="text-xs text-slate-500 mt-3 font-bold">Brush daily to collect all stars!</p>
             </div>
 
             <div class="bg-slate-950 p-5 rounded-3xl mb-8 border border-slate-800">
-                <p class="text-slate-500 font-bold text-[10px] uppercase mb-1 tracking-widest text-left ml-1 font-sans">Last Score</p>
+                <p class="text-slate-500 font-bold text-[10px] uppercase mb-1 tracking-widest text-left ml-1">Latest Cleanliness Score</p>
                 <div id="display-score" class="text-6xl font-black mb-2">0%</div>
                 <div class="w-full bg-slate-800 rounded-full h-3 overflow-hidden">
                     <div id="score-bar" class="h-full bg-gradient-to-r from-indigo-500 to-pink-500 transition-all duration-300" style="width: 0%"></div>
@@ -36,14 +36,14 @@
             </div>
 
             <button onclick="initAI()" class="w-full py-6 bg-indigo-600 rounded-[30px] text-2xl font-black shadow-xl hover:bg-indigo-500 active:scale-95 transition-all">
-                เริ่มแปรงฟัน! 🚀
+                START BRUSHING! 🚀
             </button>
         </div>
 
         <div id="setup-screen" class="hidden bg-slate-900 p-12 rounded-[50px] shadow-2xl text-center border-b-8 border-slate-700">
             <div class="inline-block animate-spin rounded-full h-16 w-16 border-4 border-indigo-500 border-t-transparent mb-8"></div>
-            <h2 class="text-2xl font-bold mb-2">กำลังเตรียมสมอง AI</h2>
-            <p id="status-text" class="text-indigo-400 text-xs font-mono uppercase tracking-[0.2em]">Loading...</p>
+            <h2 class="text-2xl font-bold mb-2">Setting up AI...</h2>
+            <p id="status-text" class="text-indigo-400 text-xs font-mono uppercase tracking-[0.2em]">Loading vision tasks...</p>
         </div>
 
         <div id="game-screen" class="hidden flex flex-col items-center">
@@ -54,17 +54,17 @@
                 <div id="screen-flash" class="absolute inset-0 bg-transparent transition-colors duration-200 pointer-events-none"></div>
             </div>
             <div class="mt-4 bg-slate-900 p-4 rounded-2xl w-full text-center border border-slate-800">
-                <p id="zone-tag" class="text-indigo-400 font-black uppercase text-sm tracking-widest mb-1">โซนที่ 1: ซ้ายบน</p>
-                <p class="text-white text-xs opacity-70">มองเห็นฟันชัดขึ้นแล้ว! แปรงให้ตรงจุดนะ</p>
+                <p id="zone-tag" class="text-indigo-400 font-black uppercase text-sm tracking-widest mb-1">Zone 1: Top Left</p>
+                <p class="text-white text-xs opacity-70">Align your brush with the green circle!</p>
             </div>
         </div>
     </div>
 
-    <div id="finish-overlay" class="hidden fixed inset-0 bg-slate-950/90 z-50 flex flex-col items-center justify-center p-10 backdrop-blur-md">
+    <div id="finish-overlay" class="hidden fixed inset-0 bg-slate-950/95 z-50 flex flex-col items-center justify-center p-10 backdrop-blur-md">
         <div class="text-9xl mb-6">🌟</div>
-        <h2 class="text-5xl font-black mb-2 text-white text-center">สุดยอดไปเลย!</h2>
-        <p class="text-indigo-300 text-xl mb-10 text-center">คุณได้รับดวงดาวของวันนี้แล้ว</p>
-        <button onclick="location.reload()" class="px-12 py-5 bg-indigo-600 text-white rounded-full text-2xl font-black shadow-2xl">รับรางวัล</button>
+        <h2 class="text-5xl font-black mb-2 text-white text-center">EXCELLENT!</h2>
+        <p class="text-indigo-300 text-xl mb-10 text-center font-bold uppercase tracking-widest">You earned today's star!</p>
+        <button onclick="location.reload()" class="px-12 py-5 bg-indigo-600 text-white rounded-full text-2xl font-black shadow-2xl hover:scale-105 transition-all">COLLECT REWARD</button>
     </div>
 
     <script type="module">
@@ -72,7 +72,14 @@
 
         let faceLandmarker, isGameRunning = false, timeLeft = 10, currentZone = 1, finalScore = 0;
         const video = document.getElementById('webcam'), canvas = document.getElementById('overlay'), ctx = canvas.getContext('2d');
-        const zones = [{n:"ซ้ายบน",x:-80,y:-50},{n:"ขวาบน",x:80,y:-50},{n:"ซ้ายล่าง",x:-80,y:50},{n:"ขวาล่าง",x:80,y:50}];
+        
+        // English Zones
+        const zones = [
+            {n:"Top Left",x:-80,y:-50},
+            {n:"Top Right",x:80,y:-50},
+            {n:"Bottom Left",x:-80,y:50},
+            {n:"Bottom Right",x:80,y:50}
+        ];
 
         function updateStars() {
             const starContainer = document.getElementById('star-container');
@@ -109,7 +116,7 @@
                 if(!isGameRunning) { clearInterval(timerInt); return; }
                 timeLeft--;
                 document.getElementById('timer').innerText = timeLeft + "s";
-                document.getElementById('zone-tag').innerText = `โซนที่ ${currentZone}: ${zones[currentZone-1].n}`;
+                document.getElementById('zone-tag').innerText = `Zone ${currentZone}: ${zones[currentZone-1].n}`;
                 if(timeLeft <= 0) { 
                     if(currentZone < 4) { currentZone++; timeLeft = 10; } 
                     else { clearInterval(timerInt); finishGame(); }
@@ -152,24 +159,20 @@
                 document.getElementById('display-score').innerText = Math.round(finalScore) + "%";
                 document.getElementById('score-bar').style.width = finalScore + "%";
 
-                // วาดเป้าหมายเส้นประ
+                // Target Circle
                 ctx.beginPath(); ctx.arc(tx, ty, 50, 0, Math.PI*2);
                 ctx.strokeStyle = isOk ? "#4ade80" : "#ef4444";
                 ctx.lineWidth = 5; ctx.setLineDash([10, 10]); ctx.stroke();
 
-                // วาดจุดที่ปากแบบ Transparent 30% (ใสขึ้นมาก)
+                // Mouth Bubble (30% Transparent)
                 ctx.setLineDash([]); 
                 ctx.beginPath(); 
                 ctx.arc(mx, my, 35, 0, Math.PI*2);
-                
-                // แก้เป็น 0.3 (30%)
                 ctx.fillStyle = isOk ? "rgba(74, 222, 128, 0.3)" : "rgba(255, 255, 255, 0.3)";
-                
                 ctx.shadowBlur = 15; 
                 ctx.shadowColor = isOk ? "#4ade80" : "#ffffff"; 
                 ctx.fill();
                 
-                // เส้นขอบบางๆ เพื่อให้ยังเห็นขอบเขตฟองสบู่
                 ctx.strokeStyle = isOk ? "rgba(74, 222, 128, 0.5)" : "rgba(255, 255, 255, 0.5)";
                 ctx.lineWidth = 1.5;
                 ctx.stroke();
