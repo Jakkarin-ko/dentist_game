@@ -1,203 +1,1443 @@
 <!DOCTYPE html>
+<!-- lovable-sync-check: 2026-08-10 -->
 <html lang="th">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Happy Teeth - AI Brushing Game</title>
+    <title>Super Dentist AI - Ultimate Hero</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/vision_bundle.js" crossorigin="anonymous"></script>
-</head>
-<body class="bg-indigo-50 font-sans min-h-screen flex items-center justify-center p-4">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Itim&display=swap');
+        
+        body { 
+            font-family: 'Itim', cursive; 
+            background: #020617; 
+            color: white; 
+            touch-action: none; 
+            overflow: hidden; 
+            margin: 0; 
+            transition: background-color 0.5s ease;
+        }
+        .cyber { font-family: 'Orbitron', sans-serif; }
+        .screen { display: none; position: absolute; inset: 0; width: 100%; height: 100%; flex-direction: column; z-index: 10; }
+        .screen.active { display: flex; }
+        .rank-active { border: 2px solid #22d3ee; background: rgba(34, 211, 238, 0.15); box-shadow: 0 0 20px rgba(34, 211, 238, 0.4); }
+        
+        @keyframes floatText { 
+            0% { transform: translateY(0) scale(1); opacity: 1; } 
+            100% { transform: translateY(-120px) scale(0.8); opacity: 0; } 
+        }
+        .combo-text { 
+            animation: floatText 1.2s cubic-bezier(0.25, 1, 0.5, 1) forwards; 
+            position: absolute; 
+            pointer-events: none; 
+            font-weight: 900; 
+            text-shadow: 0 4px 8px rgba(0,0,0,0.9); 
+        }
 
-    <div id="app" class="w-full max-w-md">
-        <div id="home-screen" class="bg-white p-10 rounded-[50px] shadow-2xl text-center border-t-8 border-pink-400">
-            <div class="text-8xl mb-6">✨</div>
-            <h1 class="text-4xl font-black text-indigo-600 mb-2">ฟันสะอาดจัง!</h1>
-            <p class="text-gray-400 font-bold mb-8 italic">สะสมคะแนนจากการแปรงฟัน</p>
+        /* Danger pulse overlay for boss encounter */
+        @keyframes redAlertPulse {
+            0%, 100% { background: rgba(239, 68, 68, 0); }
+            50% { background: rgba(239, 68, 68, 0.25); }
+        }
+        .danger-pulse { animation: redAlertPulse 1.5s infinite; pointer-events: none; }
+
+        /* Neon Rainbow Fever Mode Glow Animation */
+        @keyframes feverBorderPulse {
+            0%, 100% { border-color: #f43f5e; box-shadow: inset 0 0 30px rgba(244, 63, 94, 0.4); }
+            33% { border-color: #3b82f6; box-shadow: inset 0 0 30px rgba(59, 130, 246, 0.4); }
+            66% { border-color: #10b981; box-shadow: inset 0 0 30px rgba(16, 185, 129, 0.4); }
+        }
+        .fever-active { animation: feverBorderPulse 1s linear infinite; }
+        
+        /* Interactive Day / Night Adaptive Theme Styling Rules */
+        .theme-day #game-container { background: radial-gradient(circle, #f0fdfa 0%, #ccfbf1 100%); border-color: #0d9488; }
+        .theme-day { background-color: #f0fdf4 !important; color: #111827 !important; }
+        .theme-day .screen { color: #111827; }
+        .theme-day #hud { background-color: rgba(240, 253, 250, 0.95); border-bottom-color: #0d9488; }
+        .theme-day #hud span, .theme-day #hud div { color: #0f766e; }
+        .theme-day #timer-txt { color: #e11d48; }
+
+        .theme-night #game-container { background: #020617; border-color: #1e293b; }
+        .theme-night { background-color: #000000 !important; color: white !important; }
+
+        /* Meticulous Pulse Glow for interactive controls */
+        @keyframes subtlePulse {
+            0%, 100% { box-shadow: 0 0 10px rgba(34, 211, 238, 0.25); border-color: rgba(34, 211, 238, 0.3); }
+            50% { box-shadow: 0 0 22px rgba(34, 211, 238, 0.6); border-color: rgba(34, 211, 238, 0.8); }
+        }
+        .pause-pulse { animation: subtlePulse 3s infinite ease-in-out; }
+
+        /* Scanlines tactical video overlay */
+        .scanlines {
+            background: linear-gradient(
+                rgba(18, 16, 16, 0) 50%, 
+                rgba(0, 0, 0, 0.25) 50%
+            ), linear-gradient(
+                90deg,
+                rgba(255, 0, 0, 0.04),
+                rgba(0, 255, 0, 0.02),
+                rgba(0, 0, 255, 0.04)
+            );
+            background-size: 100% 4px, 6px 100%;
+        }
+
+        /* Glassmorphic custom scrollbar styling */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.3); }
+        ::-webkit-scrollbar-thumb { background: rgba(6, 182, 212, 0.4); border-radius: 99px; }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen bg-black theme-night" onclick="triggerAudioInitiation()">
+
+    <div id="game-container" class="w-full max-w-md h-[95vh] bg-slate-950 rounded-[40px] border-4 border-slate-800 relative overflow-hidden shadow-2xl transition-all duration-500">
+        
+        <!-- IN-GAME HUD with Stats and Theme Badges -->
+        <div id="hud" class="hidden absolute top-0 inset-x-0 bg-slate-900/95 p-4 flex justify-between items-center z-[100] border-b border-cyan-500/30 transition-all duration-500">
+            <div class="flex flex-col">
+                <span class="cyber text-yellow-400 text-lg">🪙 <span id="coin-txt-hud">0</span></span>
+                <span id="rank-tag-hud" class="text-[10px] cyber text-cyan-400 uppercase">RANK: ROOKIE</span>
+            </div>
+
+            <!-- Real-time Day/Night Sensing Badge -->
+            <div id="env-badge-hud" class="px-2.5 py-1 rounded-full text-[9px] font-bold cyber bg-slate-800/80 text-cyan-300 border border-cyan-400/30 flex items-center gap-1">
+                <span>🔄 INITIALIZING SENSORS...</span>
+            </div>
+
+            <div class="flex flex-col items-end">
+                <div id="timer-txt" class="cyber text-2xl text-rose-500 font-black">20s</div>
+                <div id="combo-display" class="text-xs text-orange-400 font-bold cyber">COMBO: 0</div>
+            </div>
+        </div>
+
+        <!-- Dynamic Red Warning Screen Alert Overlay -->
+        <div id="alert-overlay" class="absolute inset-0 z-30 pointer-events-none transition-all duration-300"></div>
+
+        <!-- Custom Notification Toast System -->
+        <div id="notification-container" class="absolute top-20 inset-x-4 hidden flex justify-center z-[200] pointer-events-none"></div>
+
+        <!-- HOME PAGE -->
+        <div id="page-home" class="screen active items-center justify-start p-6 text-center bg-radial from-slate-900 to-slate-950 overflow-y-auto h-full">
+            <!-- Mute Toggle (Top Right of Home) -->
+            <button onclick="toggleMute()" id="home-mute-btn" class="absolute top-6 right-6 w-11 h-11 flex items-center justify-center bg-slate-800/80 border border-slate-700 rounded-full shadow-lg active:scale-95 transition-all text-xl hover:bg-slate-700 z-50">
+                🔊
+            </button>
+
+            <div class="text-6xl mt-6 mb-2 animate-bounce">⚔️🦷</div>
+            <h1 class="cyber text-3xl font-black mb-1 bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500">ULTIMATE DENTIST AI</h1>
             
-            <div class="bg-indigo-50 p-6 rounded-3xl mb-8 border-2 border-indigo-100 shadow-inner">
-                <p class="text-indigo-400 font-bold text-xs uppercase mb-1 tracking-widest">Clean Score</p>
-                <div id="display-score" class="text-7xl font-black text-indigo-600 mb-2">65%</div>
-                <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden border border-gray-100">
-                    <div id="score-bar" class="h-full bg-pink-500 transition-all duration-1000" style="width: 65%"></div>
+            <!-- Perspective Light Level Diagnostics -->
+            <div id="home-env-diagnostic" class="mb-4 inline-flex items-center gap-2 px-4 py-1.5 bg-slate-900/80 border border-slate-700/60 rounded-full text-[9px] text-slate-300">
+                <span id="home-env-dot" class="w-2.5 h-2.5 rounded-full bg-yellow-400 animate-pulse"></span>
+                <span id="home-env-text" class="cyber uppercase">Detecting Perspective...</span>
+            </div>
+
+            <button onclick="initAI()" class="w-full py-5 bg-green-500 rounded-3xl text-2xl font-black shadow-[0_8px_0_#166534] active:translate-y-1 active:shadow-none transition-all mb-4 text-white hover:bg-green-400">BATTLE START!</button>
+            
+            <div class="grid grid-cols-3 gap-2 w-full mb-4">
+                <button onclick="showPage('shop')" class="p-3 bg-slate-800 hover:bg-slate-700 rounded-xl cyber text-[10px] text-amber-400">SHOP & UPGRADE 🛠️</button>
+                <button onclick="showPage('friends')" class="p-3 bg-slate-800 hover:bg-slate-700 rounded-xl cyber text-[10px] text-indigo-400">FRIENDS 👥</button>
+                <button onclick="showPage('rank')" class="p-3 bg-slate-800 hover:bg-slate-700 rounded-xl cyber text-[10px] text-fuchsia-400">RANK 🏆</button>
+            </div>
+
+            <!-- New Daily Holographic Quests Card -->
+            <div class="w-full p-4 bg-slate-900/90 border border-cyan-500/20 rounded-2xl text-left">
+                <div class="flex justify-between items-center mb-3">
+                    <span class="cyber text-xs font-bold text-cyan-400 uppercase tracking-wide">🛰️ HOLOGRAPHIC DAILY MISSIONS</span>
+                    <span class="text-[9px] px-2 py-0.5 bg-cyan-950/40 border border-cyan-500/40 text-cyan-300 rounded cyber">LIVE</span>
+                </div>
+                <div id="quest-list" class="space-y-2">
+                    <!-- Loaded dynamically via state scripts -->
+                </div>
+            </div>
+        </div>
+
+        <!-- SKINS & UPGRADE SHOP PAGE -->
+        <div id="page-shop" class="screen p-6 bg-slate-950 overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="cyber text-xl text-amber-400 font-bold">Armory Shop</h2>
+                <button onclick="showPage('home')" class="text-xl">✖️</button>
+            </div>
+
+            <!-- Split tabs controller -->
+            <div class="flex bg-slate-900/80 p-1 rounded-xl mb-4 border border-slate-800">
+                <button id="tab-btn-skins" onclick="switchShopTab('skins')" class="w-1/2 py-2 text-xs font-bold cyber rounded-lg bg-cyan-500 text-slate-950 transition-all">NEON SKINS</button>
+                <button id="tab-btn-upgrades" onclick="switchShopTab('upgrades')" class="w-1/2 py-2 text-xs font-bold cyber rounded-lg text-slate-400 transition-all hover:text-slate-200">RPG UPGRADES</button>
+            </div>
+
+            <!-- Skins tab container -->
+            <div id="shop-tab-skins" class="space-y-3">
+                <div id="shop-list" class="space-y-3"></div>
+            </div>
+
+            <!-- Upgrades tab container (hidden initially) -->
+            <div id="shop-tab-upgrades" class="hidden space-y-3">
+                <div id="upgrade-list" class="space-y-3"></div>
+            </div>
+        </div>
+
+        <!-- RANKINGS PAGE -->
+        <div id="page-rank" class="screen p-6 bg-slate-950 overflow-y-auto">
+            <div class="flex justify-between items-center mb-6"><h2 class="cyber text-xl text-fuchsia-400 font-bold">Hero Journey</h2><button onclick="showPage('home')" class="text-xl">✖️</button></div>
+            <div id="rank-container" class="space-y-4"></div>
+        </div>
+
+        <!-- LEADERBOARD / FRIENDS PAGE -->
+        <div id="page-friends" class="screen p-6 bg-slate-950 overflow-y-auto">
+            <div class="flex justify-between items-center mb-6"><h2 class="cyber text-xl text-indigo-400 font-bold">Top Heroes</h2><button onclick="showPage('home')" class="text-xl">✖️</button></div>
+            <div class="space-y-3">
+                <div class="p-4 bg-cyan-950/40 border border-cyan-500/50 rounded-2xl flex justify-between items-center">
+                    <span class="font-bold text-slate-100">🥇 You (Ultimate Hero)</span>
+                    <span class="cyber text-cyan-400 font-bold" id="f-score-you">0</span>
+                </div>
+                <div id="leaderboard-rivals" class="space-y-3">
+                    <!-- Simulated rivals populated dynamically -->
+                </div>
+            </div>
+        </div>
+
+        <!-- CAMERA & ALIGNMENT SETUP SCREEN -->
+        <div id="page-setup" class="screen items-center justify-center bg-slate-900 p-8 text-center">
+            <div class="w-16 h-16 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mb-6 mx-auto"></div>
+            <h2 id="loading-txt" class="cyber text-xl text-cyan-400 mb-4">PREPARING GEAR...</h2>
+            <div class="p-4 bg-slate-950/80 border border-slate-700/50 rounded-2xl max-w-xs mx-auto">
+                <p class="text-xs text-slate-400 uppercase tracking-wider cyber mb-2 text-yellow-400">🛡️ Hero Alignment</p>
+                <p class="text-[11px] text-slate-300">Keep your head centered. The system will auto-calibrate brushing thresholds once a safe tracking stream is secured.</p>
+            </div>
+        </div>
+
+        <!-- ACTIVE GAME SCREEN WITH GRAPHICS CANVAS -->
+        <div id="page-game" class="screen">
+            <video id="webcam" class="absolute inset-0 w-full h-full object-cover scale-x-[-1]" playsinline muted></video>
+            <canvas id="gameCanvas" class="absolute inset-0 w-full h-full"></canvas>
+            
+            <!-- Real-time HUD Alerts (Mouth Opened, Boss warning, Fever alert) -->
+            <div id="ar-status-panel" class="absolute top-20 left-4 z-40 flex flex-col gap-1.5 pointer-events-none">
+                <div id="ar-fever-badge" class="hidden px-2.5 py-1 bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 text-white rounded-lg text-[9px] cyber font-bold animate-pulse border border-yellow-300 shadow-[0_0_15px_rgba(245,158,11,0.6)]">
+                    ⚡ OVERDRIVE FEVER MODE! (2x POINTS)
+                </div>
+                <div id="ar-wide-mouth" class="hidden px-2.5 py-1 bg-fuchsia-500/90 text-white rounded-lg text-[9px] cyber font-bold animate-bounce border border-fuchsia-300">
+                    😮 MOUTH WIDE OPEN! (3x COINS)
+                </div>
+                <div id="ar-boss-tag" class="hidden px-2.5 py-1 bg-red-600/95 text-white rounded-lg text-[9px] cyber font-bold animate-pulse border border-red-400">
+                    👿 BOSS DEFEATED: <span id="boss-hp-tag">100%</span>
                 </div>
             </div>
 
-            <button onclick="switchScreen('setup')" class="w-full py-5 bg-pink-500 text-white rounded-3xl text-2xl font-black shadow-[0_10px_0_0_rgba(219,39,119,1)] hover:translate-y-1 hover:shadow-[0_6px_0_0_rgba(219,39,119,1)] active:shadow-none transition-all">
-                เริ่มแปรงฟัน! 🚀
-            </button>
+            <!-- Floating interactive pausing controller -->
+            <div id="game-pause-wrapper" class="hidden absolute top-20 right-4 z-[105] flex items-center justify-center">
+                <div class="absolute inset-0 rounded-full border border-cyan-500/30 scale-125 pause-pulse"></div>
+                <button id="game-pause-btn" onclick="togglePause()" class="relative w-12 h-12 flex items-center justify-center bg-slate-900/90 backdrop-blur-md border-2 border-cyan-400/40 rounded-full shadow-[0_0_15px_rgba(34,211,238,0.25)] hover:border-cyan-400 hover:shadow-[0_0_25px_rgba(34,211,238,0.5)] active:scale-90 active:border-cyan-300 transition-all duration-200 cursor-pointer group">
+                    <svg id="pause-svg" class="w-4 h-4 text-cyan-400 fill-current group-hover:text-cyan-300 group-hover:scale-110 transition-all duration-200" viewBox="0 0 24 24">
+                        <rect x="5" y="4" width="4" height="16" rx="1"></rect>
+                        <rect x="15" y="4" width="4" height="16" rx="1"></rect>
+                    </svg>
+                    <svg id="play-svg" class="hidden w-4 h-4 text-emerald-400 fill-current group-hover:text-emerald-300 group-hover:scale-110 transition-all duration-200" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- TACTICAL PAUSE MODAL -->
+            <div id="pause-modal" class="hidden absolute inset-0 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center z-[110] scanlines">
+                <div class="relative bg-slate-900/90 border border-cyan-500/40 p-8 rounded-[32px] text-center w-80 max-w-sm shadow-[0_0_40px_rgba(6,182,212,0.15)] overflow-hidden">
+                    <div class="absolute top-3 left-3 w-4 h-4 border-t-2 border-l-2 border-cyan-500/50"></div>
+                    <div class="absolute top-3 right-3 w-4 h-4 border-t-2 border-r-2 border-cyan-500/50"></div>
+                    <div class="absolute bottom-3 left-3 w-4 h-4 border-b-2 border-l-2 border-cyan-500/50"></div>
+                    <div class="absolute bottom-3 right-3 w-4 h-4 border-b-2 border-r-2 border-cyan-500/50"></div>
+
+                    <div class="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/10 border border-amber-500/30 rounded-full text-xs text-amber-400 mb-4 cyber">
+                        <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+                        TACTICAL PAUSE
+                    </div>
+
+                    <h2 class="cyber text-3xl text-slate-100 font-bold mb-2 tracking-wide uppercase">PAUSED</h2>
+                    <p class="text-xs text-slate-400 mb-6 font-semibold">Clean teeth save worlds. Adjust your posture and get ready to scrub!</p>
+                    
+                    <div class="grid grid-cols-3 gap-2 bg-slate-950/80 border border-slate-800 p-3 rounded-2xl mb-6">
+                        <div class="flex flex-col items-center">
+                            <span class="text-[9px] text-slate-500 cyber">COINS</span>
+                            <span id="pause-stat-coins" class="text-sm font-bold text-yellow-400 cyber">0</span>
+                        </div>
+                        <div class="flex flex-col items-center border-x border-slate-800">
+                            <span class="text-[9px] text-slate-500 cyber">COMBO</span>
+                            <span id="pause-stat-combo" class="text-sm font-bold text-orange-400 cyber">0</span>
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <span class="text-[9px] text-slate-500 cyber">TIME LEFT</span>
+                            <span id="pause-stat-time" class="text-sm font-bold text-rose-500 cyber">0s</span>
+                        </div>
+                    </div>
+
+                    <button onclick="togglePause()" class="w-full py-4 bg-cyan-500 hover:bg-cyan-400 rounded-2xl text-slate-950 text-md font-bold transition-all shadow-[0_4px_0_#0e7490] hover:shadow-[0_2px_0_#0e7490] active:translate-y-0.5 tracking-wider cyber">
+                        RESUME BATTLE
+                    </button>
+                </div>
+            </div>
+
+            <div id="float-container" class="absolute inset-0 pointer-events-none"></div>
+            <div class="absolute bottom-10 inset-x-6 text-center z-20">
+                <p id="zone-tag" class="bg-black/80 p-4 rounded-3xl border-2 border-cyan-500 text-white font-black text-xl uppercase italic shadow-lg">READY HERO?</p>
+            </div>
         </div>
 
-        <div id="setup-screen" class="hidden bg-white p-10 rounded-[50px] shadow-2xl text-center border-b-8 border-indigo-200">
-            <div class="text-6xl mb-6 animate-bounce">🦷</div>
-            <h2 class="text-2xl font-black text-indigo-600 mb-4">กำลังเตรียมระบบ AI</h2>
-            <p id="status-text" class="text-indigo-400 font-bold text-sm animate-pulse uppercase tracking-widest">ตรวจสอบ Library...</p>
-        </div>
-
-        <div id="game-screen" class="hidden flex flex-col items-center">
-            <div class="relative w-full aspect-[4/3] bg-black rounded-[40px] overflow-hidden border-[10px] border-white shadow-2xl">
-                <video id="webcam" class="absolute inset-0 w-full h-full object-cover scale-x-[-1]" playsinline muted></video>
-                <canvas id="overlay" class="absolute inset-0 w-full h-full"></canvas>
-                <div id="timer" class="absolute top-6 right-6 bg-pink-500 text-white px-6 py-2 rounded-2xl font-black text-2xl border-4 border-white shadow-lg">10s</div>
-            </div>
-            <div class="mt-8 bg-white p-6 rounded-3xl shadow-xl w-full text-center border-b-8 border-indigo-100">
-                <p id="game-instruction" class="text-2xl font-black text-indigo-700 tracking-wide uppercase">อ้าปากกว้างๆ แล้วแปรงตามจุด!</p>
-            </div>
+        <!-- GAME OVER / RESULTS PAGE -->
+        <div id="page-result" class="screen items-center justify-center p-8 text-center bg-slate-950">
+            <h2 class="cyber text-3xl text-green-400 mb-2 italic">MISSION SUCCESS!</h2>
+            <div class="text-7xl font-black mb-10 text-yellow-400" id="res-coins">+0</div>
+            <button onclick="location.reload()" class="w-full py-6 bg-cyan-600 rounded-[30px] font-black text-2xl uppercase shadow-[0_8px_0_#0891b2] active:translate-y-1 active:shadow-none transition-all text-white">Continue</button>
         </div>
     </div>
 
-    <script>
-        // --- ตัวแปรควบคุมระบบ ---
-        let score = 65;
-        let timeLeft = 10;
-        let currentZone = 1;
-        let faceLandmarker;
-        let isGameRunning = false;
+    <script type="module">
+        import { FaceLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
 
-        const video = document.getElementById('webcam');
-        const canvas = document.getElementById('overlay');
-        const ctx = canvas.getContext('2d');
+        let faceLandmarker, isGameRunning = false, isPaused = false;
+        let timeLeft = 20, currentZone = 0, sessionCoins = 0, combo = 0;
+        
+        /* Audio Synthesis Variables */
+        let audioCtx, synthInterval, homeSynthInterval, audioInitialized = false;
+        let bubbles = []; // Particle physics system array for clean bubbles
 
-        // --- ฟังก์ชันสลับหน้าจอ ---
-        function switchScreen(screen) {
-            document.getElementById('home-screen').classList.add('hidden');
-            document.getElementById('setup-screen').classList.add('hidden');
-            document.getElementById('game-screen').classList.add('hidden');
-            
-            if (screen === 'setup') {
-                document.getElementById('setup-screen').classList.remove('hidden');
-                initAI();
-            } else if (screen === 'game') {
-                document.getElementById('game-screen').classList.remove('hidden');
-            } else {
-                document.getElementById('home-screen').classList.remove('hidden');
+        /* Dynamic AR Virtual Teeth & Boss States */
+        let teethHealth = [0.1, 0.2, 0.1, 0.1, 0.3, 0.2, 0.2, 0.1]; // 0 = Clean white, 1.0 = Fully yellowed cavity
+        let bossActive = false, bossHP = 0, bossX = 0, bossY = 0, bossTimer = 0;
+        let openMouthActive = false;
+        let isFeverActive = false;
+
+        const video = document.getElementById('webcam'), canvas = document.getElementById('gameCanvas'), ctx = canvas.getContext('2d');
+        
+        const rankData = [
+            { id: 'rookie', name: 'ROOKIE', icon: '👶', min: 0 },
+            { id: 'pro', name: 'PRO BRUSHER', icon: '🪥', min: 1000 },
+            { id: 'hero', name: 'TOOTH HERO', icon: '🦸', min: 5000 },
+            { id: 'legend', name: 'DENTAL LEGEND', icon: '💎', min: 15000 }
+        ];
+
+        const skins = {
+            cyan: { name: "Cyan Laser", color: "#22d3ee", cost: 0, mult: 1.0, bonusText: "1.0x Score Power" },
+            fuchsia: { name: "Pink Neon", color: "#f0abfc", cost: 500, mult: 1.2, bonusText: "+20% Score Boost!" },
+            lime: { name: "Slime Green", color: "#4ade80", cost: 1500, mult: 1.5, bonusText: "+50% Score Boost!" },
+            gold: { name: "Golden Solar", color: "#fbbf24", cost: 5000, mult: 2.0, bonusText: "2.0x DOUBLE Score! ⚡" }
+        };
+
+        // Static configuration for RPG Upgrades
+        const upgradeConfig = {
+            bristles: { name: "Nano-Bristles 🪥", desc: "Brush stains away faster", baseCost: 150, maxLevel: 5 },
+            battery: { name: "Fusion Battery 🔋", desc: "+2 Seconds game time per level", baseCost: 200, maxLevel: 5 },
+            shield: { name: "Shield Generator 🛡️", desc: "Reduces Boss recovery rate by 15%", baseCost: 300, maxLevel: 5 }
+        };
+
+        const initialRivals = [
+            { name: "CavityCrusher 🦷", score: 4800, rank: "🦸 TOOTH HERO" },
+            { name: "ToothFairy99 👑", score: 3200, rank: "🪥 PRO BRUSHER" },
+            { name: "BrushMasterPro ⚡", score: 1200, rank: "🪥 PRO BRUSHER" },
+            { name: "DentistGiga 🦾", score: 650, rank: "👶 ROOKIE" }
+        ];
+
+        let state = JSON.parse(localStorage.getItem('hero_ultimate_v3')) || { 
+            coins: 0, 
+            ownedSkins: ['cyan'], 
+            activeSkin: 'cyan',
+            muted: false,
+            rivals: initialRivals,
+            upgrades: { bristles: 0, battery: 0, shield: 0 },
+            quests: {
+                comboReached: { desc: "Reach a 30 Combo", target: 30, progress: 0, reward: 250, claimed: false },
+                bossBeaten: { desc: "Defeat 1 Cavity Boss", target: 1, progress: 0, reward: 400, claimed: false },
+                anyUpgrade: { desc: "Purchase 1 RPG Upgrade", target: 1, progress: 0, reward: 300, claimed: false }
+            }
+        };
+
+        // Ensure state variables exist (migration support)
+        if (state.upgrades === undefined) state.upgrades = { bristles: 0, battery: 0, shield: 0 };
+        if (state.quests === undefined) {
+            state.quests = {
+                comboReached: { desc: "Reach a 30 Combo", target: 30, progress: 0, reward: 250, claimed: false },
+                bossBeaten: { desc: "Defeat 1 Cavity Boss", target: 1, progress: 0, reward: 400, claimed: false },
+                anyUpgrade: { desc: "Purchase 1 RPG Upgrade", target: 1, progress: 0, reward: 300, claimed: false }
+            };
+        }
+        if (state.muted === undefined) state.muted = false;
+
+        // Custom AI Synth voice announcer wrapper
+        function speak(text) {
+            if (state.muted || !window.speechSynthesis) return;
+            try {
+                window.speechSynthesis.cancel(); // Stop ongoing speeches
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.volume = 0.55;
+                utterance.rate = 1.15;
+                utterance.pitch = 0.95;
+                // Prefer clean robotic speech styles if supported by OS
+                const voices = window.speechSynthesis.getVoices();
+                const engVoice = voices.find(v => v.lang.startsWith('en'));
+                if (engVoice) utterance.voice = engVoice;
+                window.speechSynthesis.speak(utterance);
+            } catch (err) {
+                console.warn("Speech Synthesis blocked or unsupported", err);
             }
         }
 
-        // --- ฟังก์ชัน AI ---
-        async function initAI() {
+        function updateStartupTheme() {
+            const hour = new Date().getHours();
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const isNight = (hour >= 18 || hour < 6) || prefersDark;
+            const dot = document.getElementById('home-env-dot');
+            const txt = document.getElementById('home-env-text');
+
+            if (isNight) {
+                document.body.classList.add('theme-night');
+                document.body.classList.remove('theme-day');
+                dot.style.backgroundColor = '#a855f7';
+                txt.innerText = 'Night Mode (Sense Active) 🌙';
+            } else {
+                document.body.classList.add('theme-day');
+                document.body.classList.remove('theme-night');
+                dot.style.backgroundColor = '#fbbf24';
+                txt.innerText = 'Day Mode (Sense Active) ☀️';
+            }
+        }
+
+        function renderDailyQuests() {
+            const qList = document.getElementById('quest-list');
+            if (!qList) return;
+            qList.innerHTML = "";
+            Object.keys(state.quests).forEach(key => {
+                const quest = state.quests[key];
+                const isCompleted = quest.progress >= quest.target;
+                const progressPercent = Math.min(100, Math.round((quest.progress / quest.target) * 100));
+
+                qList.innerHTML += `
+                    <div class="p-3 bg-slate-950/80 border border-slate-800 rounded-xl flex flex-col gap-2">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="font-bold text-slate-100">${quest.desc}</span>
+                            <span class="cyber text-yellow-400 font-bold">+${quest.reward} 🪙</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="flex-grow bg-slate-800 h-2.5 rounded-full overflow-hidden border border-slate-700/50">
+                                <div class="bg-cyan-400 h-full transition-all duration-300" style="width: ${progressPercent}%"></div>
+                            </div>
+                            <span class="cyber text-[9px] text-slate-400">${quest.progress}/${quest.target}</span>
+                        </div>
+                        <div class="flex justify-end">
+                            ${quest.claimed ? 
+                                `<span class="text-[10px] cyber text-slate-500 font-semibold uppercase">Claimed ✓</span>` : 
+                                isCompleted ? 
+                                `<button onclick="claimQuest('${key}')" class="px-3 py-1 bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-300 hover:to-amber-400 text-slate-950 text-[10px] cyber font-black rounded-lg transition-all shadow-md active:scale-95">CLAIM REWARD</button>` : 
+                                `<span class="text-[9px] cyber text-indigo-400 font-semibold uppercase tracking-wider">In Progress</span>`
+                            }
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        window.claimQuest = (key) => {
+            const quest = state.quests[key];
+            if (quest.progress >= quest.target && !quest.claimed) {
+                quest.claimed = true;
+                state.coins += quest.reward;
+                saveState();
+                confetti({ particleCount: 60 });
+                speak("REWARD SAVED!");
+                showNotification(`Claimed +${quest.reward} Coins!`, "success");
+                renderDailyQuests();
+                updateUI();
+            }
+        };
+
+        function saveState() {
+            localStorage.setItem('hero_ultimate_v3', JSON.stringify(state));
+        }
+
+        window.addEventListener('load', () => {
+            updateStartupTheme();
+            updateRivalsScores();
+            updateMuteButtonVisual();
+            renderDailyQuests();
+        });
+
+        window.addEventListener('resize', () => {
+            if (video.videoWidth && isGameRunning) {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+            }
+        });
+
+        function getScaleFactor() {
+            if (!canvas.width || !canvas.height) return 1.0;
+            const benchmark = 640;
+            return Math.min(canvas.width, canvas.height) / benchmark;
+        }
+
+        function showNotification(message, type = "info") {
+            const container = document.getElementById('notification-container');
+            container.innerHTML = `
+                <div class="px-6 py-4 bg-slate-900 border-2 ${type === 'error' ? 'border-red-500 text-red-400' : 'border-cyan-500 text-cyan-400'} rounded-3xl shadow-2xl flex items-center gap-3 animate-bounce">
+                    <span class="text-lg">${type === 'error' ? '⚠️' : '💡'}</span>
+                    <span class="cyber text-xs font-bold uppercase tracking-wider">${message}</span>
+                </div>
+            `;
+            container.classList.remove('hidden');
+            setTimeout(() => { container.classList.add('hidden'); }, 3000);
+        }
+
+        function updateRivalsScores() {
+            state.rivals.forEach(rival => {
+                rival.score += Math.floor(Math.random() * 80) + 10;
+                let currentRank = rankData[0];
+                for(let r of rankData) { if(rival.score >= r.min) currentRank = r; }
+                rival.rank = `${currentRank.icon} ${currentRank.name}`;
+            });
+            saveState();
+        }
+
+        function renderRivals() {
+            const container = document.getElementById('leaderboard-rivals');
+            container.innerHTML = "";
+            const sorted = [...state.rivals].sort((a, b) => b.score - a.score);
+            sorted.forEach((rival, idx) => {
+                let badge = "👥";
+                if (idx === 0) badge = "🥈";
+                if (idx === 1) badge = "🥉";
+                container.innerHTML += `
+                    <div class="p-4 bg-slate-900/80 border border-slate-800 rounded-2xl flex justify-between items-center transition-all">
+                        <div class="flex flex-col flex-grow text-left">
+                            <span class="text-xs font-bold text-slate-200">${badge} ${rival.name}</span>
+                            <span class="text-[9px] text-indigo-400 font-semibold cyber">${rival.rank}</span>
+                        </div>
+                        <span class="cyber text-xs font-bold text-indigo-300">${rival.score}</span>
+                    </div>
+                `;
+            });
+        }
+
+        function triggerAudioInitiation() {
+            if (audioInitialized) return;
             try {
-                const status = document.getElementById('status-text');
-                
-                // ตรวจเช็ค Library จนกว่าจะเจอ (แก้ปัญหา undefined)
-                let attempts = 0;
-                while (!window.mediapipe?.tasksVision && attempts < 30) {
-                    status.innerText = `เชื่อมต่อ Library (${attempts+1}/30)...`;
-                    await new Promise(r => setTimeout(r, 500));
-                    attempts++;
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
                 }
+                audioInitialized = true;
+                if (!isGameRunning && !state.muted) {
+                    startLobbySong();
+                }
+            } catch (err) {
+                console.warn("Unable to trigger dynamic synth immediately", err);
+            }
+        }
+        window.triggerAudioInitiation = triggerAudioInitiation;
 
-                const vision = window.mediapipe.tasksVision;
-                status.innerText = "กำลังโหลดสมอง AI...";
+        function updateMuteButtonVisual() {
+            const btn = document.getElementById('home-mute-btn');
+            if (btn) {
+                btn.innerHTML = state.muted ? "🔇" : "🔊";
+                btn.classList.toggle('border-slate-700', !state.muted);
+                btn.classList.toggle('border-red-500/50', state.muted);
+                btn.classList.toggle('bg-slate-800/80', !state.muted);
+                btn.classList.toggle('bg-red-950/20', state.muted);
+            }
+        }
+
+        function toggleMute() {
+            state.muted = !state.muted;
+            saveState();
+            updateMuteButtonVisual();
+            
+            if (state.muted) {
+                stopLobbySong();
+                stopChiptuneSong();
+            } else {
+                triggerAudioInitiation();
+                if (!isGameRunning) {
+                    startLobbySong();
+                } else if (!isPaused) {
+                    startChiptuneSong();
+                }
+            }
+        }
+        window.toggleMute = toggleMute;
+
+        function startLobbySong() {
+            try {
+                if (state.muted) return;
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                if (homeSynthInterval) return;
+
+                // A cozy, floating retro loop progression (Cmaj7 -> Am9 -> Fmaj7 -> G6)
+                const chords = [
+                    [261.63, 329.63, 392.00, 493.88], // Cmaj7
+                    [220.00, 261.63, 329.63, 392.00], // Am9-ish
+                    [174.61, 220.00, 261.63, 349.23], // Fmaj7
+                    [196.00, 246.94, 293.66, 392.00]  // G6
+                ];
+                let chordIdx = 0;
+                let noteIdx = 0;
+
+                homeSynthInterval = setInterval(() => {
+                    if (isGameRunning) {
+                        stopLobbySong();
+                        return;
+                    }
+                    if (state.muted) return;
+
+                    const osc = audioCtx.createOscillator();
+                    const gainNode = audioCtx.createGain();
+                    osc.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+
+                    osc.type = 'sine';
+                    const currentChord = chords[chordIdx];
+                    const freq = currentChord[noteIdx % currentChord.length];
+                    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+                    gainNode.gain.setValueAtTime(0.02, audioCtx.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.38);
+
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.4);
+
+                    noteIdx++;
+                    if (noteIdx % 4 === 0) {
+                        chordIdx = (chordIdx + 1) % chords.length;
+                    }
+                }, 350);
+            } catch (err) {
+                console.warn("Lobby audio init blocked", err);
+            }
+        }
+
+        function stopLobbySong() {
+            if (homeSynthInterval) {
+                clearInterval(homeSynthInterval);
+                homeSynthInterval = null;
+            }
+        }
+
+        function playSfx(type) {
+            if (state.muted) return;
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                if (type === 'pause') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(523.25, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(261.63, audioCtx.currentTime + 0.15);
+                    gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.16);
+                } else if (type === 'resume') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(261.63, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(523.25, audioCtx.currentTime + 0.15);
+                    gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.16);
+                } else if (type === 'clean_scratch') {
+                    osc.type = 'triangle';
+                    const pitchOffset = isFeverActive ? 400 : 0;
+                    osc.frequency.setValueAtTime(1000 + pitchOffset + Math.random() * 600, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.08);
+                    gain.gain.setValueAtTime(0.02, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.09);
+                } else if (type === 'boss_hit') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(180, audioCtx.currentTime);
+                    osc.frequency.linearRampToValueAtTime(50, audioCtx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.11);
+                } else if (type === 'boss_die') {
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.4);
+                    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.41);
+                }
+            } catch (err) {
+                console.warn("Audio Sandbox parameters error", err);
+            }
+        }
+
+        function startChiptuneSong() {
+            try {
+                if (state.muted) return;
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                if (synthInterval) return;
+
+                const introMelody = [
+                    261.63, 329.63, 392.00, 523.25, 392.00, 523.25, 587.33, 659.25,
+                    587.33, 523.25, 392.00, 329.63, 349.23, 440.00, 523.25, 440.00
+                ];
+                let beat = 0;
+
+                synthInterval = setInterval(() => {
+                    if (!isGameRunning || isPaused) return;
+                    if (state.muted) return;
+
+                    const osc = audioCtx.createOscillator();
+                    const gainNode = audioCtx.createGain();
+                    
+                    osc.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+
+                    osc.type = 'triangle';
+                    let nextFreq = introMelody[beat % introMelody.length];
+                    
+                    // Fever mode speeds up and raises pitch slightly
+                    if (isFeverActive) {
+                        nextFreq *= 1.25; 
+                    }
+
+                    osc.frequency.setValueAtTime(nextFreq, audioCtx.currentTime);
+
+                    gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.22);
+
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.25);
+                    beat++;
+                }, 250);
+            } catch (err) {
+                console.error("Audio blocked by browser limits", err);
+            }
+        }
+
+        function stopChiptuneSong() {
+            if (synthInterval) {
+                clearInterval(synthInterval);
+                synthInterval = null;
+            }
+        }
+
+        window.togglePause = () => {
+            if (!isGameRunning) return;
+            isPaused = !isPaused;
+            
+            const pauseModal = document.getElementById('pause-modal');
+            const pauseSvg = document.getElementById('pause-svg');
+            const playSvg = document.getElementById('play-svg');
+            const pBtn = document.getElementById('game-pause-btn');
+
+            if (isPaused) {
+                playSfx('pause');
+                document.getElementById('pause-stat-coins').innerText = sessionCoins;
+                document.getElementById('pause-stat-combo').innerText = combo;
+                document.getElementById('pause-stat-time').innerText = timeLeft + "s";
+
+                pauseModal.classList.remove('hidden');
+                pauseSvg.classList.add('hidden');
+                playSvg.classList.remove('hidden');
+
+                pBtn.classList.remove('border-cyan-400/40', 'shadow-[0_0_15px_rgba(34,211,238,0.25)]');
+                pBtn.classList.add('border-emerald-400/60', 'shadow-[0_0_20px_rgba(52,211,153,0.4)]');
+
+                if (audioCtx) audioCtx.suspend();
+            } else {
+                playSfx('resume');
+                pauseModal.classList.add('hidden');
+                pauseSvg.classList.remove('hidden');
+                playSvg.classList.add('hidden');
+
+                pBtn.classList.add('border-cyan-400/40', 'shadow-[0_0_15px_rgba(34,211,238,0.25)]');
+                pBtn.classList.remove('border-emerald-400/60', 'shadow-[0_0_20px_rgba(52,211,153,0.4)]');
+
+                if (audioCtx) audioCtx.resume();
+            }
+        };
+
+        window.showPage = (id) => {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('page-' + id).classList.add('active');
+            updateUI();
+            if(id === 'rank') renderRanks();
+            if(id === 'shop') {
+                renderShop();
+                renderUpgrades();
+            }
+            if(id === 'friends') renderRivals();
+
+            if (id === 'home' || id === 'friends' || id === 'rank' || id === 'shop') {
+                startLobbySong();
+                if (id === 'home') renderDailyQuests();
+            } else {
+                stopLobbySong();
+            }
+        };
+
+        window.switchShopTab = (tabName) => {
+            const btnSkins = document.getElementById('tab-btn-skins');
+            const btnUpgrades = document.getElementById('tab-btn-upgrades');
+            const tabSkins = document.getElementById('shop-tab-skins');
+            const tabUpgrades = document.getElementById('shop-tab-upgrades');
+
+            if (tabName === 'skins') {
+                btnSkins.className = "w-1/2 py-2 text-xs font-bold cyber rounded-lg bg-cyan-500 text-slate-950 transition-all";
+                btnUpgrades.className = "w-1/2 py-2 text-xs font-bold cyber rounded-lg text-slate-400 transition-all hover:text-slate-200";
+                tabSkins.classList.remove('hidden');
+                tabUpgrades.classList.add('hidden');
+            } else {
+                btnUpgrades.className = "w-1/2 py-2 text-xs font-bold cyber rounded-lg bg-cyan-500 text-slate-950 transition-all";
+                btnSkins.className = "w-1/2 py-2 text-xs font-bold cyber rounded-lg text-slate-400 transition-all hover:text-slate-200";
+                tabUpgrades.classList.remove('hidden');
+                tabSkins.classList.add('hidden');
+            }
+        };
+
+        function updateUI() {
+            const total = state.coins + sessionCoins;
+            document.getElementById('coin-txt-hud').innerText = total;
+            document.getElementById('f-score-you').innerText = total;
+            let currentRank = rankData[0];
+            for(let r of rankData) { if(total >= r.min) currentRank = r; }
+            document.getElementById('rank-tag-hud').innerText = "RANK: " + currentRank.name;
+        }
+
+        function spawnFloatingText(text, x, y) {
+            const el = document.createElement('div');
+            el.className = 'combo-text cyber text-lg sm:text-xl';
+            el.innerText = text;
+            el.style.left = `${x}px`;
+            el.style.top = `${y}px`;
+            
+            const activeColor = skins[state.activeSkin].color;
+            el.style.color = activeColor;
+            
+            document.getElementById('float-container').appendChild(el);
+            setTimeout(() => el.remove(), 1200);
+        }
+
+        function renderRanks() {
+            const container = document.getElementById('rank-container');
+            const total = state.coins + sessionCoins;
+            container.innerHTML = "";
+            rankData.forEach(rank => {
+                const isUnlocked = total >= rank.min;
+                const isActive = (isUnlocked && (rankData.indexOf(rank) === rankData.length-1 || total < rankData[rankData.indexOf(rank)+1].min));
+                container.innerHTML += `<div class="p-4 rounded-2xl bg-slate-900 border ${isActive ? 'rank-active' : 'border-slate-800'} flex items-center justify-between">
+                    <div class="flex items-center gap-4"><span class="text-3xl">${rank.icon}</span>
+                    <div class="text-left"><div class="cyber text-sm text-slate-100">${rank.name}</div><div class="text-[10px] text-slate-500">${rank.min} COINS</div></div></div>
+                    ${isUnlocked ? '✅' : '🔒'}</div>`;
+            });
+        }
+
+        function renderShop() {
+            const list = document.getElementById('shop-list');
+            list.innerHTML = "";
+            Object.keys(skins).forEach(key => {
+                const s = skins[key], isOwned = state.ownedSkins.includes(key), isActive = state.activeSkin === key;
+                list.innerHTML += `<div class="p-4 bg-slate-900 border ${isActive ? 'border-cyan-400' : 'border-slate-700'} rounded-2xl flex justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        <div class="w-6 h-6 rounded-full shrink-0 animate-pulse" style="background:${s.color}"></div>
+                        <div class="flex flex-col text-left">
+                            <span class="cyber text-xs text-slate-100">${s.name}</span>
+                            <span class="text-[9px] text-yellow-400 font-bold cyber tracking-wider">${s.bonusText}</span>
+                        </div>
+                    </div>
+                    <button id="shop-btn-${key}" class="px-4 py-2 bg-blue-600 rounded-lg text-[10px] cyber text-white">${isActive ? 'ACTIVE' : isOwned ? 'EQUIP' : 'BUY ('+s.cost+')'}</button></div>`;
+            });
+
+            Object.keys(skins).forEach(key => {
+                document.getElementById(`shop-btn-${key}`).addEventListener('click', () => buySkin(key));
+            });
+        }
+
+        function renderUpgrades() {
+            const list = document.getElementById('upgrade-list');
+            list.innerHTML = "";
+            Object.keys(upgradeConfig).forEach(key => {
+                const u = upgradeConfig[key];
+                const currentLevel = state.upgrades[key] || 0;
+                const isMax = currentLevel >= u.maxLevel;
+                const cost = u.baseCost * (currentLevel + 1);
+
+                list.innerHTML += `
+                    <div class="p-4 bg-slate-900 border border-slate-700 rounded-2xl flex justify-between items-center">
+                        <div class="flex flex-col text-left flex-grow mr-2">
+                            <span class="cyber text-xs text-slate-100">${u.name} (Lv. ${currentLevel}/${u.maxLevel})</span>
+                            <span class="text-[9px] text-slate-400">${u.desc}</span>
+                            <!-- Level nodes visualization dots -->
+                            <div class="flex gap-1 mt-1.5">
+                                ${Array.from({length: u.maxLevel}).map((_, i) => `
+                                    <span class="w-2.5 h-1.5 rounded-sm ${i < currentLevel ? 'bg-cyan-400 shadow-[0_0_5px_#22d3ee]' : 'bg-slate-700'}"></span>
+                                `).join('')}
+                            </div>
+                        </div>
+                        <button id="upgrade-btn-${key}" ${isMax ? 'disabled' : ''} class="px-4 py-2 ${isMax ? 'bg-slate-800 text-slate-500' : 'bg-green-600 hover:bg-green-500 text-white'} rounded-lg text-[10px] cyber font-bold shrink-0 transition-all">
+                            ${isMax ? 'MAXED' : `UPGRADE (${cost} 🪙)`}
+                        </button>
+                    </div>
+                `;
+            });
+
+            Object.keys(upgradeConfig).forEach(key => {
+                const btn = document.getElementById(`upgrade-btn-${key}`);
+                if (btn && state.upgrades[key] < upgradeConfig[key].maxLevel) {
+                    btn.addEventListener('click', () => buyUpgrade(key));
+                }
+            });
+        }
+
+        function buyUpgrade(key) {
+            const u = upgradeConfig[key];
+            const currentLevel = state.upgrades[key] || 0;
+            const cost = u.baseCost * (currentLevel + 1);
+
+            if (state.coins >= cost) {
+                state.coins -= cost;
+                state.upgrades[key] = currentLevel + 1;
                 
-                const fileset = await vision.FilesetResolver.forVisionTasks(
-                    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
-                );
+                // Track Quest progression
+                state.quests.anyUpgrade.progress = Math.min(state.quests.anyUpgrade.target, state.quests.anyUpgrade.progress + 1);
 
-                faceLandmarker = await vision.FaceLandmarker.createFromOptions(fileset, {
-                    baseOptions: {
-                        modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
-                        delegate: "CPU"
+                saveState();
+                confetti({particleCount: 25});
+                speak("SYSTEM UPGRADED!");
+                renderUpgrades();
+                updateUI();
+            } else {
+                showNotification("Collect more coins hero!", "info");
+            }
+        }
+
+        function buySkin(key) {
+            if(state.ownedSkins.includes(key)) { 
+                state.activeSkin = key; 
+            } else if(state.coins >= skins[key].cost) {
+                state.coins -= skins[key].cost; 
+                state.ownedSkins.push(key); 
+                state.activeSkin = key;
+                confetti({particleCount: 30});
+                speak("ARMORY EQUIPPED!");
+            } else { 
+                showNotification("Collect more coins hero!", "info"); 
+            }
+            saveState();
+            renderShop();
+            updateUI();
+        }
+
+        window.initAI = async () => {
+            stopLobbySong();
+            
+            showPage('setup');
+            const phrases = ["CALIBRATING SENSORS...", "ALIGNING GEAR...", "LASERS PREPARED 100%"];
+            let phraseIndex = 0; 
+            const textInterval = setInterval(() => { 
+                document.getElementById('loading-txt').innerText = phrases[phraseIndex++ % 3]; 
+            }, 800);
+            
+            try {
+                const fileset = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm");
+                faceLandmarker = await FaceLandmarker.createFromOptions(fileset, {
+                    baseOptions: { 
+                        modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task", 
+                        delegate: "GPU" 
                     },
                     runningMode: "VIDEO"
                 });
-
-                status.innerText = "เปิดกล้อง...";
+                
                 const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
                 video.srcObject = stream;
-                
-                video.onloadedmetadata = () => {
-                    video.play();
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-                    startGame();
+                video.onloadedmetadata = () => { 
+                    video.play(); 
+                    canvas.width = video.videoWidth; 
+                    canvas.height = video.videoHeight; 
+                    clearInterval(textInterval);
+                    startGame(); 
                 };
-            } catch (err) {
-                alert("Error: " + err.message);
-                switchScreen('home');
+            } catch (e) { 
+                clearInterval(textInterval);
+                showNotification("Camera Access Denied or Sandboxed!", "error"); 
+                showPage('home'); 
+                document.getElementById('game-pause-wrapper').classList.add('hidden');
             }
-        }
+        };
 
         function startGame() {
-            switchScreen('game');
-            isGameRunning = true;
-            timeLeft = 10;
-            currentZone = 1;
+            showPage('game'); 
+            document.getElementById('hud').classList.remove('hidden');
+            document.getElementById('game-pause-wrapper').classList.remove('hidden');
+            isGameRunning = true; 
+            isPaused = false;
+            isFeverActive = false;
+
+            // Apply Fusion Battery RPG upgrade (+2 seconds per level)
+            const batteryLevel = state.upgrades.battery || 0;
+            timeLeft = 20 + (batteryLevel * 2);
+
+            sessionCoins = 0;
+            combo = 0;
+            bubbles = []; 
+            teethHealth = [0.4, 0.6, 0.5, 0.3, 0.6, 0.5, 0.4, 0.5]; // Re-infect virtual teeth
+            bossActive = false;
+            
+            document.getElementById('timer-txt').innerText = timeLeft + "s";
+            document.getElementById('game-container').classList.remove('fever-active');
+            document.getElementById('ar-fever-badge').classList.add('hidden');
+            
+            speak("BATTLE START!");
+            startChiptuneSong();
             renderLoop();
-            startTimer();
-        }
-
-        function startTimer() {
-            const timerElement = document.getElementById('timer');
-            const interval = setInterval(() => {
-                if (!isGameRunning) { clearInterval(interval); return; }
+            
+            const timerInt = setInterval(() => {
+                if(!isGameRunning) {
+                    clearInterval(timerInt);
+                    return;
+                }
+                if (isPaused) return; 
                 
-                timeLeft--;
-                timerElement.innerText = timeLeft + "s";
+                timeLeft--; 
+                document.getElementById('timer-txt').innerText = timeLeft + "s";
 
-                if (timeLeft <= 0) {
-                    if (currentZone < 4) {
-                        currentZone++;
-                        timeLeft = 10;
-                    } else {
-                        clearInterval(interval);
-                        finishGame();
-                    }
+                // Boss battle trigger event logic (starts at exactly 12s remaining)
+                if (timeLeft === 12 && !bossActive) {
+                    triggerBossFight();
+                }
+
+                if(timeLeft <= 0) { 
+                    isGameRunning = false; 
+                    clearInterval(timerInt);
+                    finishGame(); 
                 }
             }, 1000);
         }
 
+        function triggerBossFight() {
+            bossActive = true;
+            bossHP = 100;
+            bossTimer = 5; 
+            
+            playSfx('boss_hit');
+            speak("BOSS DETECTED!");
+            document.getElementById('alert-overlay').classList.add('danger-pulse');
+            document.getElementById('ar-boss-tag').classList.remove('hidden');
+            showNotification("⚠️ CAVITY BOSS DETECTED! SCRUB ITS NOSE!", "error");
+
+            setTimeout(() => {
+                document.getElementById('alert-overlay').classList.remove('danger-pulse');
+            }, 5000);
+        }
+
         function finishGame() {
-            isGameRunning = false;
-            score = Math.min(100, score + 15);
-            document.getElementById('display-score').innerText = score + "%";
-            document.getElementById('score-bar').style.width = score + "%";
+            stopChiptuneSong();
             
-            // ปิดกล้องเพื่อประหยัดแบต
-            const stream = video.srcObject;
-            stream.getTracks().forEach(track => track.stop());
+            // Check Combo Quest Achievement
+            if (combo >= state.quests.comboReached.target) {
+                state.quests.comboReached.progress = state.quests.comboReached.target;
+            }
+
+            state.coins += sessionCoins;
+            saveState();
+
+            document.getElementById('res-coins').innerText = "+" + sessionCoins;
+            document.getElementById('game-pause-wrapper').classList.add('hidden'); 
+            document.getElementById('game-container').classList.remove('fever-active');
             
-            alert("เก่งมาก! ฟันสะอาดขึ้นแล้ว ✨");
-            switchScreen('home');
+            speak("MISSION SUCCESS!");
+            showPage('result'); 
+            confetti({ particleCount: 200, spread: 90 });
+        }
+
+        function drawArrows(tx, ty, mode, isOk, scale) {
+            ctx.save(); 
+            ctx.translate(tx, ty);
+            const color = isOk ? "#4ade80" : "#ef4444";
+            ctx.strokeStyle = color; 
+            ctx.lineWidth = Math.max(4, 9 * scale); 
+            ctx.lineCap = "round";
+            
+            const move = Math.sin(Date.now() / 60) * 15 * scale;
+            ctx.beginPath();
+            
+            if(mode === "horizontal") {
+                ctx.moveTo((-32 * scale) - move, 0); ctx.lineTo((32 * scale) + move, 0);
+                ctx.moveTo((18 * scale) + move, -8 * scale); ctx.lineTo((32 * scale) + move, 0); ctx.lineTo((18 * scale) + move, 8 * scale);
+                ctx.moveTo((-18 * scale) - move, -8 * scale); ctx.lineTo((-32 * scale) - move, 0); ctx.lineTo((-18 * scale) - move, 8 * scale);
+            } else {
+                ctx.moveTo(0, (-32 * scale) - move); ctx.lineTo(0, (32 * scale) + move);
+                ctx.moveTo(-8 * scale, (-18 * scale) - move); ctx.lineTo(0, (-32 * scale) - move); ctx.lineTo(8 * scale, (-18 * scale) - move);
+                ctx.moveTo(-8 * scale, (18 * scale) + move); ctx.lineTo(0, (32 * scale) + move); ctx.lineTo(8 * scale, (18 * scale) + move);
+            }
+            ctx.stroke(); 
+            ctx.restore();
+        }
+
+        function createBubbleBurst(x, y, count, scale, customColor = null) {
+            const colors = customColor ? [customColor, "#ffffff"] : [skins[state.activeSkin].color, "#ffffff", "#bae6fd", "#e0f2fe"];
+            for (let i = 0; i < count; i++) {
+                bubbles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 6 * scale,
+                    vy: (Math.random() - 0.8) * 8 * scale - (1 * scale),
+                    radius: (2 + Math.random() * 4) * scale,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    life: 1.0,
+                    decay: 0.02 + Math.random() * 0.03
+                });
+            }
+        }
+
+        let lastThemeUpdate = 0;
+        function detectAmbientLightAndApply(currentTime) {
+            if (currentTime - lastThemeUpdate < 500) return;
+            lastThemeUpdate = currentTime;
+
+            try {
+                const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imgData.data;
+                let totalLuminance = 0;
+                let samplePoints = 0;
+                
+                for (let i = 0; i < data.length; i += 4 * 100) {
+                    const r = data[i];
+                    const g = data[i + 1];
+                    const b = data[i + 2];
+                    totalLuminance += (0.2126 * r + 0.7152 * g + 0.0722 * b);
+                    samplePoints++;
+                }
+
+                const ambientLuminosity = totalLuminance / samplePoints;
+                const isDarkEnvironment = ambientLuminosity < 85; 
+                const badge = document.getElementById('env-badge-hud');
+                
+                if (isDarkEnvironment) {
+                    document.body.classList.add('theme-night');
+                    document.body.classList.remove('theme-day');
+                    badge.innerHTML = `🌙 CAM: NIGHT`;
+                    badge.className = "px-2.5 py-1 rounded-full text-[9px] font-bold cyber bg-purple-950/95 text-purple-400 border border-purple-500/30 flex items-center gap-1 transition-all";
+                } else {
+                    document.body.classList.add('theme-day');
+                    document.body.classList.remove('theme-night');
+                    badge.innerHTML = `☀️ CAM: BRIGHT`;
+                    badge.className = "px-2.5 py-1 rounded-full text-[9px] font-bold cyber bg-teal-100 text-teal-800 border border-teal-500/30 flex items-center gap-1 transition-all";
+                }
+            } catch (err) {
+                console.warn("Secure contextual fallback active.");
+            }
+        }
+
+        function drawFaceAlignmentGuide(scale) {
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+            ctx.save();
+            ctx.strokeStyle = "rgba(6, 182, 212, 0.4)";
+            ctx.lineWidth = 3 * scale;
+            ctx.setLineDash([5 * scale, 10 * scale]);
+            
+            ctx.beginPath();
+            ctx.ellipse(cx, cy, 100 * scale, 140 * scale, 0, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            ctx.font = `${Math.round(11 * scale)}px 'Orbitron', sans-serif`;
+            ctx.fillStyle = "rgba(6, 182, 212, 0.6)";
+            ctx.textAlign = "center";
+            ctx.fillText("ALIGN MOUTH WITHIN CENTER", cx, cy + (170 * scale));
+            ctx.restore();
+        }
+
+        function drawVirtualTeeth(mx, my, scale, mouthDist) {
+            const teethCount = 8;
+            const mouthWidth = 90 * scale;
+            const spacing = mouthWidth / (teethCount / 2 - 1);
+            
+            ctx.save();
+            const gapY = Math.max(2, mouthDist * 0.4);
+
+            // Upper teeth row
+            for (let i = 0; i < 4; i++) {
+                const tx = mx - (mouthWidth / 2) + (i * spacing);
+                const ty = my - gapY - (4 * scale);
+                
+                const dirtyFactor = teethHealth[i];
+                ctx.fillStyle = `rgb(255, 255, ${Math.floor(255 - (dirtyFactor * 180))})`;
+                ctx.strokeStyle = "rgba(0,0,0,0.4)";
+                ctx.lineWidth = 1;
+                
+                ctx.beginPath();
+                ctx.roundRect(tx - (8 * scale), ty - (12 * scale), 16 * scale, 12 * scale, 4 * scale);
+                ctx.fill();
+                ctx.stroke();
+
+                if (dirtyFactor <= 0.05 && Math.random() < 0.02) {
+                    drawBlingStar(tx, ty - (6 * scale), scale);
+                }
+            }
+
+            // Lower teeth row
+            for (let i = 0; i < 4; i++) {
+                const tx = mx - (mouthWidth / 2) + (i * spacing);
+                const ty = my + gapY + (4 * scale);
+                
+                const dirtyFactor = teethHealth[i + 4];
+                ctx.fillStyle = `rgb(255, 255, ${Math.floor(255 - (dirtyFactor * 180))})`;
+                ctx.strokeStyle = "rgba(0,0,0,0.4)";
+                ctx.lineWidth = 1;
+                
+                ctx.beginPath();
+                ctx.roundRect(tx - (8 * scale), ty, 16 * scale, 12 * scale, 4 * scale);
+                ctx.fill();
+                ctx.stroke();
+
+                if (dirtyFactor <= 0.05 && Math.random() < 0.02) {
+                    drawBlingStar(tx, ty + (6 * scale), scale);
+                }
+            }
+            ctx.restore();
+        }
+
+        function drawBlingStar(cx, cy, scale) {
+            ctx.save();
+            ctx.fillStyle = "#ffffff";
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - (8 * scale));
+            ctx.quadraticCurveTo(cx, cy, cx + (8 * scale), cy);
+            ctx.quadraticCurveTo(cx, cy, cx, cy + (8 * scale));
+            ctx.quadraticCurveTo(cx, cy, cx - (8 * scale), cy);
+            ctx.quadraticCurveTo(cx, cy, cx, cy - (8 * scale));
+            ctx.fill();
+            ctx.restore();
         }
 
         function renderLoop() {
-            if (!isGameRunning) return;
+            if(!isGameRunning) return;
+            
+            if (isPaused) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.save();
+                ctx.translate(canvas.width, 0);
+                ctx.scale(-1, 1);
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                ctx.restore();
+                requestAnimationFrame(renderLoop);
+                return;
+            }
 
             const results = faceLandmarker.detectForVideo(video, Date.now());
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.save();
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            ctx.restore();
 
-            if (results.faceLandmarks && results.faceLandmarks[0]) {
-                const lip = results.faceLandmarks[0][13];
-                const mx = (1 - lip.x) * canvas.width;
-                const my = lip.y * canvas.height;
+            const scale = getScaleFactor();
+            detectAmbientLightAndApply(Date.now());
 
-                // วาดจุดเป้าหมายให้เด็กแปรงตาม (4 มุมรอบปาก)
-                const offset = 60;
-                const zones = [
-                    { x: mx - offset, y: my - 30 }, { x: mx + offset, y: my - 30 },
-                    { x: mx - offset, y: my + 30 }, { x: mx + offset, y: my + 30 }
+            if (!results.faceLandmarks?.[0] || timeLeft > 18) {
+                drawFaceAlignmentGuide(scale);
+            }
+
+            if (results.faceLandmarks?.[0]) {
+                const landmarks = results.faceLandmarks[0];
+                
+                // Track inner lips to measure mouth vertical distance
+                const upperLip = landmarks[13];
+                const lowerLip = landmarks[14];
+                const mx = (1 - upperLip.x) * canvas.width;
+                const my = upperLip.y * canvas.height;
+                
+                const dy = Math.abs(upperLip.y - lowerLip.y) * canvas.height;
+                const wideMouthThreshold = 18 * scale;
+                const wideMouthDetected = dy > wideMouthThreshold;
+
+                // Toggle HUD status alerts
+                const openMouthHUD = document.getElementById('ar-wide-mouth');
+                if (wideMouthDetected) {
+                    openMouthHUD.classList.remove('hidden');
+                    openMouthActive = true;
+                } else {
+                    openMouthHUD.classList.add('hidden');
+                    openMouthActive = false;
+                }
+
+                // Render Virtual AR Teeth overlay
+                drawVirtualTeeth(mx, my, scale, dy);
+
+                if (bossActive) {
+                    bossX = mx + Math.sin(Date.now() / 150) * 60 * scale;
+                    bossY = my - 60 * scale + Math.cos(Date.now() / 250) * 20 * scale;
+
+                    // Draw the boss monster
+                    ctx.save();
+                    ctx.font = `${Math.round(52 * scale)}px Arial`;
+                    ctx.textAlign = "center";
+                    ctx.fillText("👿", bossX, bossY);
+
+                    // Boss health metrics panel
+                    ctx.fillStyle = "rgba(0,0,0,0.6)";
+                    ctx.fillRect(bossX - 30 * scale, bossY - 45 * scale, 60 * scale, 6 * scale);
+                    ctx.fillStyle = "#ef4444";
+                    ctx.fillRect(bossX - 30 * scale, bossY - 45 * scale, (bossHP / 100) * 60 * scale, 6 * scale);
+                    ctx.restore();
+
+                    // Check hits while Boss active
+                    const trackingDist = Math.sqrt((mx - bossX)**2 + (my - bossY)**2);
+                    if (trackingDist < 60 * scale) {
+                        
+                        // Bristles upgrade increases scrubbing power
+                        const bristleLevel = state.upgrades.bristles || 0;
+                        const finalDamage = 2.5 * (1 + (bristleLevel * 0.25));
+
+                        bossHP -= finalDamage;
+                        playSfx('boss_hit');
+                        createBubbleBurst(bossX, bossY, 3, scale, "#ef4444");
+                        
+                        document.getElementById('boss-hp-tag').innerText = `${Math.max(0, Math.round(bossHP))}%`;
+
+                        if (bossHP <= 0) {
+                            bossActive = false;
+                            playSfx('boss_die');
+                            speak("CAVITY BOSS DEFEATED!");
+                            document.getElementById('ar-boss-tag').classList.add('hidden');
+                            showNotification("🌟 CAVITY BOSS DEFEATED! +500 COINS!", "success");
+                            sessionCoins += 500;
+
+                            // Update Boss Quest progress
+                            state.quests.bossBeaten.progress = Math.min(state.quests.bossBeaten.target, state.quests.bossBeaten.progress + 1);
+                            saveState();
+
+                            confetti({ particleCount: 50 });
+                        }
+                    } else {
+                        // Boss health recovery is dampened by Shield RPG upgrade
+                        const shieldLevel = state.upgrades.shield || 0;
+                        const healingFactor = 0.05 * (1 - (shieldLevel * 0.15));
+                        if (bossHP < 100) bossHP += healingFactor;
+                    }
+                }
+
+                // Normal target zone tracking parameters
+                const zonesArr = [
+                    {n:"Left", x: -42 * scale, y: -12 * scale, dir: "horizontal", indices: [0, 1, 4]},
+                    {n:"Right", x: 42 * scale, y: -12 * scale, dir: "vertical", indices: [2, 3, 5]},
+                    {n:"Center", x: 0, y: 22 * scale, dir: "horizontal", indices: [6, 7]}
                 ];
                 
-                const active = zones[currentZone - 1];
+                const zone = zonesArr[currentZone];
+                const tx = mx + zone.x;
+                const ty = my + zone.y;
                 
-                // วาดเป้าหมาย
-                ctx.beginPath();
-                ctx.arc(active.x, active.y, 40, 0, Math.PI * 2);
-                ctx.strokeStyle = "white";
-                ctx.lineWidth = 5;
-                ctx.setLineDash([10, 5]);
-                ctx.stroke();
+                const hitThreshold = 65 * scale;
+                const isOk = Math.sqrt((mx - tx)**2 + (my - ty)**2) < hitThreshold;
 
-                // วาด Effect ฟองสบู่
-                ctx.beginPath();
-                ctx.arc(mx, my, 20, 0, Math.PI * 2);
-                ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+                drawArrows(tx, ty, zone.dir, isOk, scale);
+                
+                ctx.font = `${Math.round(40 * scale)}px Arial`; 
+                ctx.textAlign = "center";
+                ctx.fillText(isOk ? "🔥" : "👾", tx, ty + (12 * scale));
+
+                if(isOk) {
+                    combo++;
+                    
+                    // Activate Fever Mode at 15+ combo
+                    if (combo >= 15 && !isFeverActive) {
+                        isFeverActive = true;
+                        speak("FEVER MODE!");
+                        document.getElementById('game-container').classList.add('fever-active');
+                        document.getElementById('ar-fever-badge').classList.remove('hidden');
+                    }
+
+                    const bonus = Math.floor(combo / 10);
+                    
+                    // Score power calculations
+                    const skinMult = skins[state.activeSkin]?.mult || 1.0;
+                    const wideMouthBonus = openMouthActive ? 3.0 : 1.0;
+                    const feverBonus = isFeverActive ? 2.0 : 1.0;
+
+                    // Clean Bristles RPG Upgrade speeds up teeth health scrubbing rate
+                    const bristleLevel = state.upgrades.bristles || 0;
+                    const cleaningRate = 0.008 * (1 + (bristleLevel * 0.25));
+
+                    sessionCoins += Math.round((5 + bonus) * skinMult * wideMouthBonus * feverBonus);
+                    document.getElementById('combo-display').innerText = `COMBO: ${combo}`;
+                    
+                    // Clean teeth stains
+                    zone.indices.forEach(idx => {
+                        if (teethHealth[idx] > 0) teethHealth[idx] -= cleaningRate;
+                    });
+
+                    playSfx('clean_scratch');
+                    createBubbleBurst(mx, my, isFeverActive ? 4 : 2, scale);
+
+                    if(combo % 50 === 0) {
+                        spawnFloatingText("ULTRA CLEAN!", mx, my);
+                        speak("UNSTOPPABLE!");
+                        if(navigator.vibrate) navigator.vibrate(50);
+                    }
+                    if(sessionCoins % 200 === 0) currentZone = (currentZone + 1) % 3;
+                } else {
+                    combo = 0;
+                    if (isFeverActive) {
+                        isFeverActive = false;
+                        document.getElementById('game-container').classList.remove('fever-active');
+                        document.getElementById('ar-fever-badge').classList.add('hidden');
+                    }
+                    document.getElementById('combo-display').innerText = `COMBO: 0`;
+                }
+                
+                updateUI();
+                document.getElementById('zone-tag').innerText = zone.dir === "horizontal" ? "↔️ SCRUB SIDEWAYS" : "↕️ SCRUB UP-DOWN";
+
+                const baseRadius = 24 * scale;
+                const comboSlightGrowth = Math.min(8 * scale, (combo / 15) * scale);
+                const trackerRadius = baseRadius + comboSlightGrowth;
+
+                const activeColor = skins[state.activeSkin].color;
+                ctx.beginPath(); 
+                ctx.arc(mx, my, trackerRadius, 0, Math.PI*2);
+                ctx.fillStyle = isOk ? activeColor + "AA" : "rgba(255,255,255,0.25)";
+                ctx.strokeStyle = "white"; 
+                ctx.lineWidth = Math.max(2, 3 * scale); 
+                ctx.stroke(); 
                 ctx.fill();
+            }
+
+            for (let i = bubbles.length - 1; i >= 0; i--) {
+                const b = bubbles[i];
+                b.x += b.vx;
+                b.y += b.vy;
+                b.vy += 0.05 * scale;
+                b.life -= b.decay;
+
+                if (b.life <= 0) {
+                    bubbles.splice(i, 1);
+                    continue;
+                }
+
+                ctx.save();
+                ctx.globalAlpha = b.life;
+                ctx.fillStyle = b.color;
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
             }
 
             requestAnimationFrame(renderLoop);
         }
+        
+        updateUI();
     </script>
 </body>
 </html>
